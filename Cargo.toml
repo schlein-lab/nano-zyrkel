@@ -26,6 +26,9 @@ scraper = "0.22"
 url = "2"
 jsonpath-rust = "0.7"
 lettre = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "builder", "smtp-transport"] }
+imap = "2"
+native-tls = "0.2"
+base64 = "0.22"
 
 [features]
 default = []

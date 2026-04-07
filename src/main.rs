@@ -8,6 +8,7 @@ mod config;
 mod condition;
 mod fetch;
 mod i18n;
+mod maildesk;
 mod notify;
 mod output;
 
@@ -51,11 +52,18 @@ async fn main() -> Result<()> {
         .with_context(|| format!("Failed to load config: {}", cli.config.display()))?;
 
     tracing::info!(
-        hat_id = %config.id,
-        hat_type = %config.hat_type,
+        nano_id = %config.id,
+        nano_type = %config.hat_type,
         "{}",
         i18n::msg(&cli.lang, "hat_starting", &[&config.id])
     );
+
+    // ── Maildesk mode: completely different flow ──
+    if matches!(config.hat_type, config::HatType::Maildesk) {
+        return maildesk::run_maildesk(&config, cli.dry_run).await;
+    }
+
+    // ── Standard nano mode: fetch → condition → notify → act ──
 
     // 1. Fetch content — from local file (NANO_SOURCE_FILE) or HTTP
     let content = if let Ok(file_path) = std::env::var("NANO_SOURCE_FILE") {

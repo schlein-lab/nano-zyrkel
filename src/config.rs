@@ -53,7 +53,49 @@ pub struct HatConfig {
     /// HAT state — updated by hat-runner between runs
     #[serde(default)]
     pub state: HatState,
+
+    /// Maildesk-specific config (only used when type = maildesk)
+    #[serde(default)]
+    pub maildesk: Option<MaildeskConfig>,
 }
+
+/// Configuration for the Maildesk nano type.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaildeskConfig {
+    /// IMAP server (default: imap.gmail.com)
+    #[serde(default = "default_imap_host")]
+    pub imap_host: String,
+    /// SMTP server (default: smtp.gmail.com)
+    #[serde(default = "default_smtp_host")]
+    pub smtp_host: String,
+    /// Reply display name (e.g. "Schlein Lab")
+    #[serde(default)]
+    pub reply_name: String,
+    /// Signature name
+    #[serde(default)]
+    pub sig_name: String,
+    /// Signature role
+    #[serde(default)]
+    pub sig_role: String,
+    /// Max emails to process per run
+    #[serde(default = "default_max_emails")]
+    pub max_emails: u32,
+    /// Max characters to send to Codex
+    #[serde(default = "default_max_codex_chars")]
+    pub max_codex_chars: usize,
+    /// Max preview characters in Telegram message
+    #[serde(default = "default_max_preview")]
+    pub max_preview_chars: usize,
+    /// HTML email template path (relative to config)
+    #[serde(default)]
+    pub template_path: Option<String>,
+}
+
+fn default_imap_host() -> String { "imap.gmail.com".into() }
+fn default_smtp_host() -> String { "smtp.gmail.com".into() }
+fn default_max_emails() -> u32 { 5 }
+fn default_max_codex_chars() -> usize { 12000 }
+fn default_max_preview() -> usize { 2400 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -68,6 +110,8 @@ pub enum HatType {
     Crawler,
     /// Detect anomalies / changes from baseline
     Guardian,
+    /// Semi-autonomous email agent with Telegram approval
+    Maildesk,
 }
 
 impl std::fmt::Display for HatType {
@@ -78,6 +122,7 @@ impl std::fmt::Display for HatType {
             Self::Deadline => write!(f, "deadline"),
             Self::Crawler => write!(f, "crawler"),
             Self::Guardian => write!(f, "guardian"),
+            Self::Maildesk => write!(f, "maildesk"),
         }
     }
 }
