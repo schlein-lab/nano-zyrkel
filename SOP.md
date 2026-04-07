@@ -13,6 +13,7 @@ Diese Anleitung ist fuer Zyrkel selbst — damit er nano-zyrkels standardisiert 
 | "Erinnere mich an Frist am Datum" | deadline | deadline_date | Nein |
 | "Gibt es was Neues zu Thema X auf Seite Y?" | watcher | llm | Ja |
 | "Beobachte ob Angebot X noch da ist" | watcher | llm | Ja |
+| "Beantworte Emails fuer mich" | maildesk | codex/llm | Ja |
 
 **Regel: IMMER erst pruefen ob es OHNE LLM geht. LLM kostet Geld.**
 
@@ -169,5 +170,9 @@ Ist es eine Frist/Deadline?
 
 Braucht es menschliches Verstaendnis der Seite?
   Ja → llm (kostet Geld!)
+  Nein ↓
+
+Soll eine Inbox bearbeitet und Emails beantwortet werden?
+  Ja → maildesk (Codex CLI + Telegram-Approval)
   Nein → contains oder regex nochmal pruefen
 ```
