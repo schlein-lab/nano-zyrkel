@@ -280,3 +280,62 @@ Setzen: `gh secret set SECRET_NAME -R user/repo -b "wert"`
 | SPA leer | JS nicht gerendert | Headless Chrome mit `--dump-dom` |
 | LLM schreibt Roman | Prompt nicht streng genug | "NUR Tabelle, kein Text" |
 | Codex auth expired | Token abgelaufen | `codex login` neu, Secret updaten |
+
+---
+
+## 12. Semi-autonomer Maildesk mit Gmail + Telegram + Codex
+
+Fuer einen Maildesk-nano, der Mails sichtet, recherchiert, einen Antwortvorschlag vorbereitet und erst nach Telegram-Freigabe sendet:
+
+### Repo-Struktur
+
+```text
+maildesk-nano/
++-- .github/workflows/run.yml
++-- hats/config.json
++-- scripts/maildesk.sh
++-- assets/email-shell.html
++-- staging/<nano-id>/...
+```
+
+### Prinzip
+
+- Gmail per IMAP lesen
+- Codex erzeugt JSON-Analyse, Recherche-Plan und Antwortentwurf
+- optionale Web-Fetches und kleine Bash-Artefakte sammeln Zusatzinfos
+- Telegram bekommt pro Fall einen konkreten Vorschlag
+- Versand passiert nur nach `/approve <case-id>`
+
+### Wichtiges Muster
+
+Die Nachricht an Telegram sollte nicht nur alarmieren, sondern schon mit einer klaren Aktion kommen:
+
+```text
+ich wuerde jetzt ungefaehr so als Antwort schreiben, passt das?
+```
+
+Dazu immer direkt die Kommandos mitgeben:
+
+```text
+/approve <case-id>
+/revise <case-id> <hinweis>
+/ignore <case-id>
+```
+
+### Sicherheitsregel fuer Shell-Artefakte
+
+Wenn Codex kleine Hilfsskripte erzeugen darf, nur fuer nicht-destruktive Analyse zulassen:
+- erlaubt: `bash`, `curl`, `jq`, `grep`, `sed`, `awk`, `cut`, `sort`, `head`, `tail`, `tr`
+- blockieren: `rm`, `mv`, `git`, `ssh`, `sudo`, Paketinstallationen, Redirects in sensible Pfade
+
+### Setup
+
+Secrets:
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+- `CODEX_AUTH`
+- `SMTP_USER`
+- `SMTP_PASS`
+
+Template:
+- `templates/repos/maildesk-codex-telegram/`

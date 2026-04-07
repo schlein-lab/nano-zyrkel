@@ -1,0 +1,25 @@
+{
+  "id": "{{NANO_ID}}",
+  "description": "{{DESCRIPTION}}",
+  "mailbox": {
+    "address": "{{MAILBOX_EMAIL}}",
+    "reply_name": "{{REPLY_NAME}}",
+    "imap_host": "imap.gmail.com",
+    "smtp_host": "smtp.gmail.com"
+  },
+  "agent": {
+    "max_emails_per_run": 5,
+    "max_web_fetches": 3,
+    "max_shell_tasks": 2,
+    "max_codex_chars": 12000,
+    "max_preview_chars": 2400,
+    "max_artifact_output_chars": 1200
+  },
+  "paths": {
+    "state_dir": "staging/{{NANO_ID}}"
+  },
+  "signature": {
+    "name": "{{SIGNATURE_NAME}}",
+    "role": "{{SIGNATURE_ROLE}}"
+  }
+}
