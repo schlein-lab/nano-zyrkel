@@ -3,6 +3,7 @@ use clap::Parser;
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 
+mod action;
 mod config;
 mod condition;
 mod fetch;
@@ -68,15 +69,27 @@ async fn main() -> Result<()> {
     // 3. Write output to staging/
     output::write_result(&config, &result, cli.dry_run)?;
 
-    // 4. Notify if match found
-    if result.matched && !cli.dry_run {
-        notify::send(&config.notify, &config, &result, &cli.lang).await?;
+    // 4. If match: notify + act
+    if result.matched {
+        if !cli.dry_run {
+            notify::send(&config.notify, &config, &result, &cli.lang).await?;
+        }
+
+        // 5. Execute action (the part that makes HATs agents, not just monitors)
+        let outcome = action::execute(&config, &result, cli.dry_run, &cli.lang).await?;
         tracing::info!(
             "{}",
             i18n::msg(&cli.lang, "match_found", &[&config.id, &result.summary])
         );
-    } else if result.matched {
-        tracing::info!("[DRY RUN] {}", i18n::msg(&cli.lang, "match_found", &[&config.id, &result.summary]));
+        match &outcome {
+            action::ActionOutcome::Executed { action_type, detail, success } => {
+                tracing::info!("Action '{}': {} (success: {})", action_type, detail, success);
+            }
+            action::ActionOutcome::Denied => {
+                tracing::info!("Action denied by user");
+            }
+            _ => {}
+        }
     } else {
         tracing::info!(
             "{}",

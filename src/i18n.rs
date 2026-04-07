@@ -30,6 +30,9 @@ static DE: LazyLock<Messages> = LazyLock::new(|| {
     m.insert("condition_deadline", "Noch {} Tage bis {}");
     m.insert("state_saved", "Zustand gespeichert");
     m.insert("output_written", "Ergebnis geschrieben nach {}");
+    m.insert("action_executed", "Aktion ausgefuehrt: {}");
+    m.insert("action_denied", "Aktion fuer HAT '{}' abgelehnt");
+    m.insert("action_approval", "Genehmigung angefragt fuer HAT '{}'");
     m
 });
 
@@ -56,6 +59,9 @@ static EN: LazyLock<Messages> = LazyLock::new(|| {
     m.insert("condition_deadline", "{} days until {}");
     m.insert("state_saved", "State saved");
     m.insert("output_written", "Result written to {}");
+    m.insert("action_executed", "Action executed: {}");
+    m.insert("action_denied", "Action denied for HAT '{}'");
+    m.insert("action_approval", "Approval requested for HAT '{}'");
     m
 });
 

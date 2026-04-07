@@ -26,6 +26,14 @@ pub struct HatConfig {
     #[serde(default)]
     pub notify: Notify,
 
+    /// What to DO when condition matches (beyond notifying)
+    #[serde(default)]
+    pub action: Option<Action>,
+
+    /// Approval required before action executes
+    #[serde(default)]
+    pub approval: ApprovalLevel,
+
     /// Where to write results
     #[serde(default = "default_output_dir")]
     pub output_dir: String,
@@ -163,6 +171,103 @@ pub struct Notify {
     /// Include extracted data in notification
     #[serde(default)]
     pub include_extracted: bool,
+}
+
+/// What the HAT should DO when its condition matches.
+/// This is what makes HATs agents instead of just monitors.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Action {
+    /// Submit an HTTP POST/PUT request (form submission, API call)
+    HttpRequest {
+        url: String,
+        method: String,
+        #[serde(default)]
+        headers: std::collections::HashMap<String, String>,
+        #[serde(default)]
+        body: Option<String>,
+        /// Body template with placeholders: {summary}, {value}, {url}, {id}
+        #[serde(default)]
+        body_template: Option<String>,
+        #[serde(default)]
+        content_type: Option<String>,
+    },
+
+    /// Create a GitHub Issue
+    GithubIssue {
+        repo: String,
+        title: String,
+        #[serde(default)]
+        body_template: Option<String>,
+        #[serde(default)]
+        labels: Vec<String>,
+    },
+
+    /// Create a GitHub Pull Request (e.g. dependency update)
+    GithubPr {
+        repo: String,
+        branch: String,
+        title: String,
+        #[serde(default)]
+        body_template: Option<String>,
+        /// Files to create/modify: { "path": "content" }
+        #[serde(default)]
+        files: std::collections::HashMap<String, String>,
+    },
+
+    /// Trigger another HAT (chain workflows)
+    TriggerHat {
+        /// Repository where the target HAT lives
+        repo: String,
+        /// Workflow filename to trigger
+        workflow: String,
+        /// Inputs to pass
+        #[serde(default)]
+        inputs: std::collections::HashMap<String, String>,
+    },
+
+    /// Write data to the Brain-Repo API endpoint (GitHub Pages)
+    PublishApi {
+        /// Path in the api/ directory (e.g. "prices/latest.json")
+        path: String,
+    },
+
+    /// Run a shell command on the Actions runner
+    Shell {
+        command: String,
+        #[serde(default)]
+        timeout_secs: Option<u64>,
+    },
+
+    /// Send a message to the Cloudflare Message Bus
+    CloudBus {
+        topic: String,
+        #[serde(default)]
+        payload_template: Option<String>,
+    },
+
+    /// Execute multiple actions in sequence
+    Chain {
+        actions: Vec<Action>,
+    },
+}
+
+/// What approval level is required before the action executes?
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ApprovalLevel {
+    /// Just do it, no questions asked
+    None,
+    /// Log the action but don't ask (audit trail)
+    #[default]
+    LogOnly,
+    /// Ask via Telegram before executing
+    AskFirst,
+    /// Only act within pre-approved budget/scope
+    WithinBudget {
+        max_cost: Option<f64>,
+        currency: Option<String>,
+    },
 }
 
 /// Persistent state between HAT runs — stored in the config or staging dir.
