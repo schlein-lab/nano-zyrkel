@@ -29,6 +29,7 @@ lettre = { version = "0.11", default-features = false, features = ["tokio1-rustl
 imap = "2"
 native-tls = "0.2"
 base64 = "0.22"
+mailparse = "0.15"
 
 [features]
 default = []

@@ -407,7 +407,7 @@ fn interpolate(template: &str, config: &HatConfig, result: &ConditionResult) -> 
         .replace("{id}", &config.id)
         .replace("{description}", &config.description)
         .replace("{summary}", &result.summary)
-        .replace("{url}", &config.source.url)
+        .replace("{url}", &config.source.as_ref().map(|s| s.url.as_str()).unwrap_or(""))
         .replace("{value}", &result.extracted_value
             .as_ref()
             .map(|v| v.to_string())

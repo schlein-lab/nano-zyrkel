@@ -24,7 +24,7 @@ fn format_message(notify: &Notify, config: &HatConfig, result: &ConditionResult)
             .replace("{id}", &config.id)
             .replace("{description}", &config.description)
             .replace("{summary}", &result.summary)
-            .replace("{url}", &config.source.url)
+            .replace("{url}", &config.source.as_ref().map(|s| s.url.as_str()).unwrap_or(""))
             .replace("{value}", &result.extracted_value
                 .as_ref()
                 .map(|v| v.to_string())
@@ -36,7 +36,9 @@ fn format_message(notify: &Notify, config: &HatConfig, result: &ConditionResult)
                 msg.push_str(&format!("\n\nExtrahiert:\n{}", serde_json::to_string_pretty(val).unwrap_or_default()));
             }
         }
-        msg.push_str(&format!("\n\nQuelle: {}", config.source.url));
+        if let Some(ref source) = config.source {
+            msg.push_str(&format!("\n\nQuelle: {}", source.url));
+        }
         msg
     }
 }

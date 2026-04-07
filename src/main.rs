@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use chrono::Timelike;
 use clap::Parser;
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
@@ -8,6 +9,7 @@ mod config;
 mod condition;
 mod fetch;
 mod i18n;
+mod literature;
 mod maildesk;
 mod notify;
 mod output;
@@ -63,7 +65,20 @@ async fn main() -> Result<()> {
         return maildesk::run_maildesk(&config, cli.dry_run).await;
     }
 
+    // ── Literature Alert: own pipeline (IMAP poll + multi-source crawl) ──
+    if matches!(config.hat_type, config::HatType::LiteratureAlert) {
+        let mode = std::env::var("RUN_MODE").unwrap_or_else(|_| {
+            let hour = chrono::Utc::now().hour();
+            if hour == 6 { "crawl".into() } else { "poll".into() }
+        });
+        return literature::run(&config, &mode, cli.dry_run, &cli.lang).await;
+    }
+
     // ── Standard nano mode: fetch → condition → notify → act ──
+    let source = config.source.as_ref()
+        .ok_or_else(|| anyhow::anyhow!("'source' required for hat_type={}", config.hat_type))?;
+    let condition_cfg = config.condition.as_ref()
+        .ok_or_else(|| anyhow::anyhow!("'condition' required for hat_type={}", config.hat_type))?;
 
     // 1. Fetch content — from local file (NANO_SOURCE_FILE) or HTTP
     let content = if let Ok(file_path) = std::env::var("NANO_SOURCE_FILE") {
@@ -71,14 +86,14 @@ async fn main() -> Result<()> {
         tokio::fs::read_to_string(&file_path).await
             .with_context(|| format!("Failed to read {}", file_path))?
     } else {
-        fetch::fetch_source(&config.source).await
-            .with_context(|| i18n::msg(&cli.lang, "fetch_failed", &[&config.source.url]))?
+        fetch::fetch_source(source).await
+            .with_context(|| i18n::msg(&cli.lang, "fetch_failed", &[&source.url]))?
     };
 
     tracing::debug!(bytes = content.len(), "Content fetched");
 
     // 2. Evaluate condition
-    let result = condition::evaluate(&config.condition, &content, &config).await?;
+    let result = condition::evaluate(condition_cfg, &content, &config).await?;
 
     // 3. Write output to staging/
     output::write_result(&config, &result, cli.dry_run)?;

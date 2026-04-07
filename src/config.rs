@@ -16,11 +16,17 @@ pub struct HatConfig {
     #[serde(rename = "type")]
     pub hat_type: HatType,
 
-    /// Where to fetch data from
-    pub source: Source,
+    /// Where to fetch data from (not used by LiteratureAlert)
+    #[serde(default)]
+    pub source: Option<Source>,
 
-    /// When is a "match" found?
-    pub condition: Condition,
+    /// When is a "match" found? (not used by LiteratureAlert)
+    #[serde(default)]
+    pub condition: Option<Condition>,
+
+    /// Literature alert configuration (only for LiteratureAlert type)
+    #[serde(default)]
+    pub literature: Option<LiteratureConfig>,
 
     /// How to notify the user
     #[serde(default)]
@@ -112,6 +118,8 @@ pub enum HatType {
     Guardian,
     /// Semi-autonomous email agent with Telegram approval
     Maildesk,
+    /// Email-driven literature research alert (PubMed, bioRxiv, medRxiv, CrossRef)
+    LiteratureAlert,
 }
 
 impl std::fmt::Display for HatType {
@@ -123,6 +131,7 @@ impl std::fmt::Display for HatType {
             Self::Crawler => write!(f, "crawler"),
             Self::Guardian => write!(f, "guardian"),
             Self::Maildesk => write!(f, "maildesk"),
+            Self::LiteratureAlert => write!(f, "literature_alert"),
         }
     }
 }
@@ -360,6 +369,61 @@ impl HatConfig {
         Ok(())
     }
 }
+
+/// Literature alert specific configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LiteratureConfig {
+    /// IMAP/SMTP mailbox settings
+    pub mailbox: LiteratureMailbox,
+
+    /// Which sources to search
+    #[serde(default = "default_lit_sources")]
+    pub sources: Vec<String>,
+
+    /// How many days back to search
+    #[serde(default = "default_days_back")]
+    pub days_back: u32,
+
+    /// Max results per source
+    #[serde(default = "default_max_per_source")]
+    pub max_results_per_source: u32,
+
+    /// Bouncer / access control
+    #[serde(default)]
+    pub bouncer: LiteratureBouncer,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LiteratureMailbox {
+    pub address: String,
+    #[serde(default = "default_reply_name")]
+    pub reply_name: String,
+    #[serde(default = "default_lit_imap_host")]
+    pub imap_host: String,
+    #[serde(default = "default_lit_smtp_host")]
+    pub smtp_host: String,
+}
+
+fn default_lit_imap_host() -> String { "imap.gmail.com".into() }
+fn default_lit_smtp_host() -> String { "smtp.gmail.com".into() }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LiteratureBouncer {
+    #[serde(default)]
+    pub allowlist_file: String,
+    #[serde(default)]
+    pub topics_file: String,
+    #[serde(default = "default_subject_prefix")]
+    pub register_subject_prefix: String,
+}
+
+fn default_lit_sources() -> Vec<String> {
+    vec!["pubmed".into(), "biorxiv".into(), "medrxiv".into(), "crossref".into()]
+}
+fn default_days_back() -> u32 { 1 }
+fn default_max_per_source() -> u32 { 20 }
+fn default_reply_name() -> String { "Literature Alert".into() }
+fn default_subject_prefix() -> String { "Literatur Recherche".into() }
 
 fn default_method() -> String { "GET".to_string() }
 fn default_model() -> String { "haiku".to_string() }

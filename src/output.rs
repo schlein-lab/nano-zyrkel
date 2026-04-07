@@ -21,7 +21,7 @@ pub fn write_result(config: &HatConfig, result: &ConditionResult, dry_run: bool)
         "summary": result.summary,
         "extracted_value": result.extracted_value,
         "content_hash": result.content_hash,
-        "source_url": config.source.url,
+        "source_url": config.source.as_ref().map(|s| s.url.as_str()).unwrap_or(""),
     });
 
     let latest_path = format!("{}/latest.json", staging_dir);
@@ -51,7 +51,7 @@ pub fn write_result(config: &HatConfig, result: &ConditionResult, dry_run: bool)
     }
 
     // For RSS, update last seen ID
-    if let crate::config::Condition::RssNewEntry = &config.condition {
+    if let Some(crate::config::Condition::RssNewEntry) = &config.condition {
         if let Some(serde_json::Value::String(id)) = &result.extracted_value {
             updated_config.state.last_rss_id = Some(id.clone());
         }
