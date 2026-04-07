@@ -1,0 +1,20 @@
+{
+  "id": "example-llm",
+  "description": "Intelligente Beobachtung mit natuerlicher Sprache",
+  "type": "watcher",
+  "source": {
+    "url": "https://example.com/page",
+    "method": "GET"
+  },
+  "condition": {
+    "type": "llm",
+    "question": "Gibt es auf dieser Seite ein neues Angebot das noch nicht ausverkauft ist?",
+    "model": "haiku"
+  },
+  "notify": {
+    "telegram": true,
+    "include_extracted": true
+  },
+  "output_dir": "staging",
+  "lang": "de"
+}

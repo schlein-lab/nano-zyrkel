@@ -1,0 +1,36 @@
+# Zyrkel HAT Workflow Template
+# Copy this file and adjust: name, cron, config path
+name: "HAT: {BESCHREIBUNG}"
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # Alle 30 Minuten — anpassen!
+  workflow_dispatch:           # Manueller Trigger moeglich
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get hat-runner
+        run: |
+          curl -sL "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/latest/download/hat-runner-linux" \
+            -o hat-runner && chmod +x hat-runner
+
+      - name: Execute HAT
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ./hat-runner --config hats/{CONFIG_NAME}.json --lang de
+
+      - name: Commit results
+        run: |
+          git config user.name "zyrkel-hat"
+          git config user.email "hat@zyrkel.local"
+          git add staging/ hats/
+          git diff --staged --quiet || \
+            git commit -m "hat: {HAT_ID} $(date -u +%Y-%m-%dT%H:%M)"
+          git push || true

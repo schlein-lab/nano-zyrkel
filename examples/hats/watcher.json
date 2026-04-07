@@ -1,0 +1,18 @@
+{
+  "id": "example-watcher",
+  "description": "Beobachte eine Webseite auf Aenderungen",
+  "type": "watcher",
+  "source": {
+    "url": "https://example.com/page",
+    "method": "GET"
+  },
+  "condition": {
+    "type": "contains",
+    "value": "verfuegbar"
+  },
+  "notify": {
+    "telegram": true
+  },
+  "output_dir": "staging",
+  "lang": "de"
+}

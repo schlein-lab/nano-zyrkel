@@ -1,0 +1,20 @@
+{
+  "id": "example-tracker",
+  "description": "Verfolge einen Wert ueber Zeit",
+  "type": "tracker",
+  "source": {
+    "url": "https://example.com/api/data",
+    "method": "GET"
+  },
+  "condition": {
+    "type": "extract_value",
+    "selector": ".price",
+    "unit": "EUR"
+  },
+  "notify": {
+    "telegram": true,
+    "message": "Neuer Datenpunkt: {value}"
+  },
+  "output_dir": "staging",
+  "lang": "de"
+}

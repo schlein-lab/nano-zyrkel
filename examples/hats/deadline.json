@@ -1,0 +1,20 @@
+{
+  "id": "example-deadline",
+  "description": "Erinnerung an eine Frist",
+  "type": "deadline",
+  "source": {
+    "url": "https://example.com",
+    "method": "GET"
+  },
+  "condition": {
+    "type": "deadline_date",
+    "date": "2026-06-30",
+    "remind_at_days": [30, 14, 7, 3, 1]
+  },
+  "notify": {
+    "telegram": true,
+    "message": "{summary}"
+  },
+  "output_dir": "staging",
+  "lang": "de"
+}
