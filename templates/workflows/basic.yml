@@ -1,0 +1,40 @@
+# nano-zyrkel: Basic Template (mechanisch, kein LLM)
+# Fuer: Watcher, Tracker, Guardian mit regex/json_path/contains Bedingungen
+name: "nano-zyrkel: {{DESCRIPTION}}"
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # Anpassen: wie oft soll der nano laufen?
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get nano-zyrkel
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh release download -R christian-schlein/nano-zyrkel -p "nano-zyrkel-linux" --clobber
+          chmod +x nano-zyrkel-linux
+          mv nano-zyrkel-linux nano-zyrkel
+
+      - name: Execute
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: ./nano-zyrkel --config hats/config.json --lang de
+
+      - name: Commit
+        run: |
+          git config user.name "nano-zyrkel"
+          git config user.email "nano@zyrkel.local"
+          git add staging/
+          git diff --staged --quiet || \
+            git commit -m "{{NANO_ID}} $(date -u +%Y-%m-%dT%H:%M)"
+          git push || true

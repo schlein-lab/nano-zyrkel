@@ -1,0 +1,100 @@
+# nano-zyrkel: Codex + Email Template (LLM-Analyse + HTML-Email-Report)
+# Fuer: Auswertungen die als formatierter Report per Email verschickt werden
+name: "nano-zyrkel: {{DESCRIPTION}}"
+
+on:
+  schedule:
+    - cron: '0 7 * * 1,5'   # Anpassen
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install + auth Codex CLI
+        env:
+          CODEX_AUTH: ${{ secrets.CODEX_AUTH }}
+        run: |
+          npm install -g @openai/codex
+          mkdir -p ~/.codex
+          echo "$CODEX_AUTH" > ~/.codex/auth.json
+
+      - name: Get nano-zyrkel
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh release download -R christian-schlein/nano-zyrkel -p "nano-zyrkel-linux" --clobber
+          chmod +x nano-zyrkel-linux
+          mv nano-zyrkel-linux nano-zyrkel
+
+      - name: Execute nano-zyrkel
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: ./nano-zyrkel --config hats/config.json --lang de
+
+      - name: Codex analysis (ad-hoc)
+        run: |
+          # Lade Daten und lasse Codex analysieren
+          DATA=$(cat staging/{{NANO_ID}}/latest.json 2>/dev/null | head -c 6000)
+          if [ -n "$DATA" ]; then
+            codex exec --skip-git-repo-check --ephemeral \
+              -o staging/{{NANO_ID}}/report.txt \
+              "Analysiere diese Daten. Formatiere als Markdown-Tabelle. NUR die Tabelle, kein Begleittext. Daten: $DATA"
+          fi
+
+      - name: Send HTML email
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        shell: bash
+        run: |
+          REPORT="staging/{{NANO_ID}}/report.txt"
+          if [ ! -s "$REPORT" ]; then exit 0; fi
+          DATE=$(date -u +%Y-%m-%d)
+          BODY_HTML=$(sed \
+            -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' \
+            -e '/^|[-|]*$/d' \
+            -e 's/^|/<tr><td style="padding:6px 10px;border-bottom:1px solid #ddd;">/g' \
+            -e 's/|$/<\/td><\/tr>/g' \
+            -e 's/|/<\/td><td style="padding:6px 10px;border-bottom:1px solid #ddd;">/g' \
+            "$REPORT")
+          {
+            printf 'From: nano-zyrkel <%s>\r\n' "$SMTP_USER"
+            printf 'To: {{EMAIL_TO}}\r\n'
+            printf 'Subject: {{DESCRIPTION}} %s\r\n' "$DATE"
+            printf 'MIME-Version: 1.0\r\n'
+            printf 'Content-Type: text/html; charset=utf-8\r\n\r\n'
+            echo '<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:800px;margin:0 auto;padding:20px;">'
+            echo '<div style="background:linear-gradient(135deg,#007A87,#3F9C35);padding:16px 24px;border-radius:8px 8px 0 0;">'
+            printf '<h2 style="margin:0;color:white;">{{DESCRIPTION}}</h2>'
+            printf '<p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">%s</p></div>' "$DATE"
+            echo '<div style="background:#f8f9fa;border:1px solid #e2e2e2;border-top:none;border-radius:0 0 8px 8px;padding:20px;">'
+            echo '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+            echo "$BODY_HTML"
+            echo '</table></div>'
+            echo '<p style="font-size:11px;color:#999;margin-top:16px;text-align:center;">nano-zyrkel &middot; automatisch</p>'
+            echo '</body></html>'
+          } > /tmp/mail.eml
+          curl -s --url "smtps://smtp.gmail.com:465" --ssl-reqd \
+            --mail-from "$SMTP_USER" --mail-rcpt "{{EMAIL_TO}}" \
+            --user "$SMTP_USER:$SMTP_PASS" -T /tmp/mail.eml
+
+      - name: Commit
+        run: |
+          git config user.name "nano-zyrkel"
+          git config user.email "nano@zyrkel.local"
+          git add staging/
+          git diff --staged --quiet || \
+            git commit -m "{{NANO_ID}} $(date -u +%Y-%m-%d)"
+          git push || true
