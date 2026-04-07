@@ -263,10 +263,11 @@ fn char_diff_ratio(_content: &str, _hash: &str) -> f64 {
 
 /// Call LLM to evaluate a condition.
 /// Priority:
-///   1) Codex CLI (codex login session or OPENAI_API_KEY)
-///   2) Zyrkel Headless via CF Bus (async — posts question, picks up answer next run)
-///   3) Anthropic API direct (ANTHROPIC_API_KEY)
-///   4) Give up
+///   1) Codex CLI (codex login session or OPENAI_API_KEY) — sync, direkt
+///   2) Email → Zyrkel Headless (async, durch jede Firewall, IMAP)
+///   3) CF Bus → Zyrkel Headless (async, braucht CF Account)
+///   4) Anthropic API direct (ANTHROPIC_API_KEY, kostet Geld)
+///   5) Give up
 async fn call_llm(question: &str, content: &str, _model: &str) -> Result<String> {
     let max_content = 8000;
     let truncated = if content.len() > max_content {
@@ -283,7 +284,7 @@ async fn call_llm(question: &str, content: &str, _model: &str) -> Result<String>
         question, truncated
     );
 
-    // 1. Try Codex CLI (uses login session or OPENAI_API_KEY)
+    // 1. Try Codex CLI (sync — uses login session or OPENAI_API_KEY)
     if codex_available().await {
         match call_codex(&prompt).await {
             Ok(answer) => return Ok(answer),
@@ -291,7 +292,15 @@ async fn call_llm(question: &str, content: &str, _model: &str) -> Result<String>
         }
     }
 
-    // 2. Try Zyrkel Headless via CF Bus (async fallback)
+    // 2. Try Email → Zyrkel Headless (async — through any firewall)
+    if std::env::var("SMTP_USER").is_ok() {
+        match llm_via_email(&prompt).await {
+            Ok(answer) => return Ok(answer),
+            Err(e) => tracing::warn!("Email LLM fallback failed: {}", e),
+        }
+    }
+
+    // 3. Try CF Bus → Zyrkel Headless (async)
     if std::env::var("ZYRKEL_BUS_URL").is_ok() {
         match post_to_zyrkel_bus(&prompt).await {
             Ok(answer) => return Ok(answer),
@@ -299,16 +308,17 @@ async fn call_llm(question: &str, content: &str, _model: &str) -> Result<String>
         }
     }
 
-    // 3. Try Anthropic API direct
+    // 4. Try Anthropic API direct
     if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
         return call_anthropic(&api_key, &prompt).await;
     }
 
     anyhow::bail!(
         "Kein LLM verfuegbar. Optionen:\n\
-         1) codex login (Codex CLI mit Pro Plan)\n\
-         2) ZYRKEL_BUS_URL setzen (async via Headless)\n\
-         3) ANTHROPIC_API_KEY setzen (direkte API)"
+         1) codex login (Codex CLI)\n\
+         2) SMTP_USER/SMTP_PASS/IMAP_HOST setzen (Email async via Headless)\n\
+         3) ZYRKEL_BUS_URL setzen (CF Bus async via Headless)\n\
+         4) ANTHROPIC_API_KEY setzen (direkte API)"
     )
 }
 
@@ -358,7 +368,104 @@ async fn call_codex(prompt: &str) -> Result<String> {
     Ok(answer.trim().to_string())
 }
 
-/// Fallback 2: Post question to Zyrkel Headless via CF Bus.
+/// Fallback 2: Email → Zyrkel Headless.
+/// Sends LLM question via SMTP, checks IMAP for answer.
+/// Headless reads IMAP, makes LLM call, replies.
+/// nano-zyrkel picks up reply on this or next run.
+///
+/// Env vars: SMTP_USER, SMTP_PASS, SMTP_HOST, IMAP_HOST, NANO_ID
+async fn llm_via_email(prompt: &str) -> Result<String> {
+    let smtp_user = std::env::var("SMTP_USER")?;
+    let smtp_pass = std::env::var("SMTP_PASS")?;
+    let smtp_host = std::env::var("SMTP_HOST").unwrap_or_else(|_| "smtp.gmail.com".into());
+    let nano_id = std::env::var("NANO_ID").unwrap_or_else(|_| "unknown".into());
+
+    let imap_host = std::env::var("IMAP_HOST").unwrap_or_else(|_| "imap.gmail.com".into());
+
+    // First: check IMAP for a pending answer from Headless
+    if let Ok(answer) = check_imap_for_answer(&imap_host, &smtp_user, &smtp_pass, &nano_id).await {
+        tracing::info!("Got pending LLM answer via Email");
+        return Ok(answer);
+    }
+
+    // No pending answer — send the question via SMTP
+    send_llm_request_email(&smtp_host, &smtp_user, &smtp_pass, &nano_id, prompt).await?;
+
+    tracing::info!("LLM request sent via Email — Headless will answer async");
+    Ok(serde_json::json!({
+        "match": false,
+        "summary": "LLM-Anfrage per Email gesendet. Antwort kommt beim naechsten Run."
+    }).to_string())
+}
+
+/// Check IMAP for a reply from Headless (subject starts with "Re: nano:llm:{nano_id}")
+async fn check_imap_for_answer(host: &str, user: &str, pass: &str, nano_id: &str) -> Result<String> {
+    let host = host.to_string();
+    let user = user.to_string();
+    let pass = pass.to_string();
+    let nano_id = nano_id.to_string();
+
+    // imap crate is sync — run in blocking thread
+    tokio::task::spawn_blocking(move || {
+        let tls = native_tls::TlsConnector::new()?;
+        let client = imap::connect((&*host, 993), &host, &tls)?;
+        let mut session = client.login(&user, &pass)
+            .map_err(|e| anyhow::anyhow!("IMAP login failed: {}", e.0))?;
+
+        session.select("INBOX")?;
+
+        let query = format!("UNSEEN SUBJECT \"Re: nano:llm:{}\"", nano_id);
+        let uids = session.search(&query)?;
+
+        let mut answer: Option<String> = None;
+
+        if let Some(&uid) = uids.iter().last() {
+            let messages = session.fetch(uid.to_string(), "BODY[TEXT]")?;
+            for msg in messages.iter() {
+                if let Some(body) = msg.text() {
+                    answer = Some(
+                        std::str::from_utf8(body)
+                            .unwrap_or("")
+                            .trim()
+                            .to_string()
+                    );
+                }
+            }
+            // Mark as seen
+            let _ = session.store(uid.to_string(), "+FLAGS (\\Seen)");
+        }
+
+        session.logout()?;
+
+        answer.ok_or_else(|| anyhow::anyhow!("No pending email answer"))
+    })
+    .await?
+}
+
+/// Send LLM request via SMTP to the shared mailbox (Headless picks it up)
+async fn send_llm_request_email(host: &str, user: &str, pass: &str, nano_id: &str, prompt: &str) -> Result<()> {
+    use lettre::{AsyncSmtpTransport, AsyncTransport, Tokio1Executor};
+    use lettre::transport::smtp::authentication::Credentials;
+    use lettre::message::Message;
+
+    let subject = format!("nano:llm:{}:{}", nano_id, chrono::Utc::now().timestamp());
+
+    let email = Message::builder()
+        .from(user.parse()?)
+        .to(user.parse()?)  // Send to self — Headless reads same mailbox
+        .subject(&subject)
+        .body(prompt.to_string())?;
+
+    let creds = Credentials::new(user.to_string(), pass.to_string());
+    let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(host)?
+        .credentials(creds)
+        .build();
+
+    mailer.send(email).await?;
+    Ok(())
+}
+
+/// Fallback 3: Post question to Zyrkel Headless via CF Bus.
 /// Headless picks it up, makes the LLM call, posts answer back.
 /// nano-zyrkel checks for pending answers at start of each run.
 async fn post_to_zyrkel_bus(prompt: &str) -> Result<String> {

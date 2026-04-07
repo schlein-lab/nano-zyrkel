@@ -25,6 +25,9 @@ clap = { version = "4", features = ["derive"] }
 scraper = "0.22"
 url = "2"
 jsonpath-rust = "0.7"
+lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "smtp-transport"] }
+imap = "2"
+native-tls = "0.2"
 
 [features]
 default = []
