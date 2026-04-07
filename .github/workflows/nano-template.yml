@@ -13,6 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
+
       - name: Get nano-zyrkel
         run: |
           curl -sL "https://github.com/christian-schlein/nano-zyrkel/releases/latest/download/nano-zyrkel-linux" \
@@ -20,9 +28,9 @@ jobs:
 
       - name: Execute
         env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           ./nano-zyrkel --config hats/{CONFIG_NAME}.json --lang de
 

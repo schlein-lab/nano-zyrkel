@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use crate::config::{Condition, HatConfig};
 
 /// Result of evaluating a HAT condition.
@@ -224,22 +224,10 @@ pub async fn evaluate(condition: &Condition, content: &str, config: &HatConfig) 
             })
         }
 
-        Condition::Llm { question, model: _ } => {
+        Condition::Llm { question, model } => {
             // Stufe 2: LLM-based condition evaluation
-            // Requires ANTHROPIC_API_KEY environment variable
-            let api_key = std::env::var("ANTHROPIC_API_KEY").ok();
-
-            if api_key.is_none() {
-                tracing::warn!("ANTHROPIC_API_KEY not set — LLM condition skipped");
-                return Ok(ConditionResult {
-                    matched: false,
-                    summary: "LLM nicht verfuegbar (kein API Key)".to_string(),
-                    extracted_value: None,
-                    content_hash,
-                });
-            }
-
-            let answer = call_llm(&api_key.unwrap(), question, content).await?;
+            // Uses Codex CLI (codex exec) or falls back to raw Anthropic API
+            let answer = call_llm(question, content, model).await?;
 
             // LLM returns JSON: { "match": true/false, "summary": "..." }
             let parsed: serde_json::Value = serde_json::from_str(&answer)
@@ -273,15 +261,88 @@ fn char_diff_ratio(_content: &str, _hash: &str) -> f64 {
     1.0
 }
 
-async fn call_llm(api_key: &str, question: &str, content: &str) -> Result<String> {
-    // Truncate content to avoid token limits
-    let max_content = 4000;
+/// Call LLM to evaluate a condition.
+/// Priority: 1) Codex CLI  2) Anthropic API  3) give up
+async fn call_llm(question: &str, content: &str, _model: &str) -> Result<String> {
+    let max_content = 8000;
     let truncated = if content.len() > max_content {
         &content[..max_content]
     } else {
         content
     };
 
+    let prompt = format!(
+        "Analysiere den folgenden Webseiten-Inhalt und beantworte die Frage.\n\
+         Antworte NUR mit JSON: {{\"match\": true/false, \"summary\": \"kurze Zusammenfassung\"}}\n\n\
+         FRAGE: {}\n\n\
+         INHALT:\n{}",
+        question, truncated
+    );
+
+    // Try Codex CLI first (uses OPENAI_API_KEY)
+    if std::env::var("OPENAI_API_KEY").is_ok() || codex_available().await {
+        match call_codex(&prompt).await {
+            Ok(answer) => return Ok(answer),
+            Err(e) => tracing::warn!("Codex CLI failed, trying fallback: {}", e),
+        }
+    }
+
+    // Fallback: Anthropic API (uses ANTHROPIC_API_KEY)
+    if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
+        return call_anthropic(&api_key, &prompt).await;
+    }
+
+    anyhow::bail!("Kein LLM verfuegbar. Setze OPENAI_API_KEY (fuer Codex) oder ANTHROPIC_API_KEY.")
+}
+
+/// Check if codex CLI is available in PATH
+async fn codex_available() -> bool {
+    tokio::process::Command::new("codex")
+        .arg("--version")
+        .output()
+        .await
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// Call Codex CLI as subprocess: codex exec -o output.json "prompt"
+async fn call_codex(prompt: &str) -> Result<String> {
+    let output_file = format!("/tmp/nano-zyrkel-llm-{}.txt", std::process::id());
+
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(120),
+        tokio::process::Command::new("codex")
+            .args([
+                "exec",
+                "--skip-git-repo-check",
+                "--ephemeral",
+                "-o", &output_file,
+                prompt,
+            ])
+            .output(),
+    )
+    .await
+    .with_context(|| "Codex CLI timeout after 120s")?
+    .with_context(|| "Codex CLI execution failed")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("Codex CLI error: {}", stderr.chars().take(200).collect::<String>());
+    }
+
+    // Read the output file
+    let answer = tokio::fs::read_to_string(&output_file).await
+        .with_context(|| format!("Failed to read Codex output from {}", output_file))?;
+
+    // Clean up
+    let _ = tokio::fs::remove_file(&output_file).await;
+
+    tracing::debug!("Codex CLI response: {}", answer.chars().take(200).collect::<String>());
+    Ok(answer.trim().to_string())
+}
+
+/// Fallback: raw Anthropic API call
+async fn call_anthropic(api_key: &str, prompt: &str) -> Result<String> {
     let client = reqwest::Client::new();
     let response = client
         .post("https://api.anthropic.com/v1/messages")
@@ -290,17 +351,8 @@ async fn call_llm(api_key: &str, question: &str, content: &str) -> Result<String
         .header("content-type", "application/json")
         .json(&serde_json::json!({
             "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 200,
-            "messages": [{
-                "role": "user",
-                "content": format!(
-                    "Analysiere den folgenden Webseiten-Inhalt und beantworte die Frage.\n\
-                     Antworte NUR mit JSON: {{\"match\": true/false, \"summary\": \"kurze Zusammenfassung\"}}\n\n\
-                     FRAGE: {}\n\n\
-                     INHALT:\n{}",
-                    question, truncated
-                )
-            }]
+            "max_tokens": 300,
+            "messages": [{ "role": "user", "content": prompt }]
         }))
         .send()
         .await?;
@@ -310,5 +362,5 @@ async fn call_llm(api_key: &str, question: &str, content: &str) -> Result<String
     body["content"][0]["text"]
         .as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| anyhow::anyhow!("Unexpected LLM response format"))
+        .ok_or_else(|| anyhow::anyhow!("Unexpected Anthropic API response"))
 }
