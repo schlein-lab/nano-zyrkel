@@ -262,7 +262,11 @@ fn char_diff_ratio(_content: &str, _hash: &str) -> f64 {
 }
 
 /// Call LLM to evaluate a condition.
-/// Priority: 1) Codex CLI  2) Anthropic API  3) give up
+/// Priority:
+///   1) Codex CLI (codex login session or OPENAI_API_KEY)
+///   2) Zyrkel Headless via CF Bus (async — posts question, picks up answer next run)
+///   3) Anthropic API direct (ANTHROPIC_API_KEY)
+///   4) Give up
 async fn call_llm(question: &str, content: &str, _model: &str) -> Result<String> {
     let max_content = 8000;
     let truncated = if content.len() > max_content {
@@ -279,20 +283,33 @@ async fn call_llm(question: &str, content: &str, _model: &str) -> Result<String>
         question, truncated
     );
 
-    // Try Codex CLI first (uses OPENAI_API_KEY)
-    if std::env::var("OPENAI_API_KEY").is_ok() || codex_available().await {
+    // 1. Try Codex CLI (uses login session or OPENAI_API_KEY)
+    if codex_available().await {
         match call_codex(&prompt).await {
             Ok(answer) => return Ok(answer),
-            Err(e) => tracing::warn!("Codex CLI failed, trying fallback: {}", e),
+            Err(e) => tracing::warn!("Codex CLI failed: {}", e),
         }
     }
 
-    // Fallback: Anthropic API (uses ANTHROPIC_API_KEY)
+    // 2. Try Zyrkel Headless via CF Bus (async fallback)
+    if std::env::var("ZYRKEL_BUS_URL").is_ok() {
+        match post_to_zyrkel_bus(&prompt).await {
+            Ok(answer) => return Ok(answer),
+            Err(e) => tracing::warn!("Zyrkel Bus fallback failed: {}", e),
+        }
+    }
+
+    // 3. Try Anthropic API direct
     if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
         return call_anthropic(&api_key, &prompt).await;
     }
 
-    anyhow::bail!("Kein LLM verfuegbar. Setze OPENAI_API_KEY (fuer Codex) oder ANTHROPIC_API_KEY.")
+    anyhow::bail!(
+        "Kein LLM verfuegbar. Optionen:\n\
+         1) codex login (Codex CLI mit Pro Plan)\n\
+         2) ZYRKEL_BUS_URL setzen (async via Headless)\n\
+         3) ANTHROPIC_API_KEY setzen (direkte API)"
+    )
 }
 
 /// Check if codex CLI is available in PATH
@@ -341,7 +358,62 @@ async fn call_codex(prompt: &str) -> Result<String> {
     Ok(answer.trim().to_string())
 }
 
-/// Fallback: raw Anthropic API call
+/// Fallback 2: Post question to Zyrkel Headless via CF Bus.
+/// Headless picks it up, makes the LLM call, posts answer back.
+/// nano-zyrkel checks for pending answers at start of each run.
+async fn post_to_zyrkel_bus(prompt: &str) -> Result<String> {
+    let bus_url = std::env::var("ZYRKEL_BUS_URL")?;
+    let bus_token = std::env::var("ZYRKEL_BUS_TOKEN").unwrap_or_default();
+    let nano_id = std::env::var("NANO_ID").unwrap_or_else(|_| "unknown".to_string());
+
+    let request_id = format!("llm-{}-{}", nano_id, chrono::Utc::now().timestamp());
+
+    // First: check if there's a pending answer from a previous run
+    let client = reqwest::Client::new();
+    let pending_resp = client
+        .get(format!("{}/msg?topic=nano/llm-answer/{}", bus_url, nano_id))
+        .header("x-zyrkel-token", &bus_token)
+        .send()
+        .await?;
+
+    if pending_resp.status().is_success() {
+        let body: serde_json::Value = pending_resp.json().await?;
+        if let Some(messages) = body["messages"].as_array() {
+            if let Some(last) = messages.last() {
+                if let Some(answer) = last["payload"].as_str() {
+                    tracing::info!("Got pending LLM answer from Zyrkel Headless");
+                    return Ok(answer.to_string());
+                }
+            }
+        }
+    }
+
+    // No pending answer — post the question for Headless to pick up
+    let resp = client
+        .post(format!("{}/msg", bus_url))
+        .header("x-zyrkel-token", &bus_token)
+        .json(&serde_json::json!({
+            "topic": format!("nano/llm-request/{}", nano_id),
+            "payload": prompt,
+            "sender": format!("nano:{}", nano_id),
+            "request_id": request_id,
+        }))
+        .send()
+        .await?;
+
+    if resp.status().is_success() {
+        tracing::info!("LLM request posted to Zyrkel Bus — Headless will answer async");
+        // Return a "pending" result — the actual answer comes next run
+        Ok(serde_json::json!({
+            "match": false,
+            "summary": "LLM-Anfrage an Zyrkel Headless gesendet. Antwort kommt beim naechsten Run."
+        }).to_string())
+    } else {
+        anyhow::bail!("Failed to post to Zyrkel Bus: {}", resp.status())
+    }
+}
+
+/// Fallback 3: raw Anthropic API call
 async fn call_anthropic(api_key: &str, prompt: &str) -> Result<String> {
     let client = reqwest::Client::new();
     let response = client
