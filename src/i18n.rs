@@ -1,5 +1,5 @@
-/// Lightweight i18n for HAT messages.
-/// HATs run on GitHub Actions — no access to Zyrkel's full i18n system.
+/// Lightweight i18n for nano-zyrkel messages.
+/// nano-zyrkels run on GitHub Actions — no access to Zyrkel's full i18n system.
 /// This is a standalone, minimal translation layer.
 
 use std::collections::HashMap;
@@ -9,14 +9,14 @@ type Messages = HashMap<&'static str, &'static str>;
 
 static DE: LazyLock<Messages> = LazyLock::new(|| {
     let mut m = HashMap::new();
-    m.insert("hat_starting", "HAT '{}' wird gestartet");
+    m.insert("hat_starting", "nano-zyrkel '{}' wird gestartet");
     m.insert("fetch_failed", "Abruf fehlgeschlagen: {}");
-    m.insert("match_found", "HAT '{}' — Treffer! {}");
-    m.insert("no_match", "HAT '{}' — kein Treffer");
+    m.insert("match_found", "nano-zyrkel '{}' — Treffer! {}");
+    m.insert("no_match", "nano-zyrkel '{}' — kein Treffer");
     m.insert("notify_telegram", "Telegram-Benachrichtigung gesendet");
     m.insert("notify_email", "Email-Benachrichtigung gesendet");
     m.insert("notify_failed", "Benachrichtigung fehlgeschlagen: {}");
-    m.insert("ttl_expired", "HAT '{}' — Laufzeit abgelaufen (TTL)");
+    m.insert("ttl_expired", "nano-zyrkel '{}' — Laufzeit abgelaufen (TTL)");
     m.insert("error_retry", "Fehler bei Versuch {}/{}: {}");
     m.insert("error_giving_up", "Alle {} Versuche fehlgeschlagen");
     m.insert("condition_contains", "Textsuche: '{}'");
@@ -31,21 +31,21 @@ static DE: LazyLock<Messages> = LazyLock::new(|| {
     m.insert("state_saved", "Zustand gespeichert");
     m.insert("output_written", "Ergebnis geschrieben nach {}");
     m.insert("action_executed", "Aktion ausgefuehrt: {}");
-    m.insert("action_denied", "Aktion fuer HAT '{}' abgelehnt");
-    m.insert("action_approval", "Genehmigung angefragt fuer HAT '{}'");
+    m.insert("action_denied", "Aktion fuer nano-zyrkel '{}' abgelehnt");
+    m.insert("action_approval", "Genehmigung angefragt fuer nano-zyrkel '{}'");
     m
 });
 
 static EN: LazyLock<Messages> = LazyLock::new(|| {
     let mut m = HashMap::new();
-    m.insert("hat_starting", "HAT '{}' starting");
+    m.insert("hat_starting", "nano-zyrkel '{}' starting");
     m.insert("fetch_failed", "Fetch failed: {}");
-    m.insert("match_found", "HAT '{}' — match found! {}");
-    m.insert("no_match", "HAT '{}' — no match");
+    m.insert("match_found", "nano-zyrkel '{}' — match found! {}");
+    m.insert("no_match", "nano-zyrkel '{}' — no match");
     m.insert("notify_telegram", "Telegram notification sent");
     m.insert("notify_email", "Email notification sent");
     m.insert("notify_failed", "Notification failed: {}");
-    m.insert("ttl_expired", "HAT '{}' — TTL expired");
+    m.insert("ttl_expired", "nano-zyrkel '{}' — TTL expired");
     m.insert("error_retry", "Error on attempt {}/{}: {}");
     m.insert("error_giving_up", "All {} attempts failed");
     m.insert("condition_contains", "Text search: '{}'");
@@ -60,8 +60,8 @@ static EN: LazyLock<Messages> = LazyLock::new(|| {
     m.insert("state_saved", "State saved");
     m.insert("output_written", "Result written to {}");
     m.insert("action_executed", "Action executed: {}");
-    m.insert("action_denied", "Action denied for HAT '{}'");
-    m.insert("action_approval", "Approval requested for HAT '{}'");
+    m.insert("action_denied", "Action denied for nano-zyrkel '{}'");
+    m.insert("action_approval", "Approval requested for nano-zyrkel '{}'");
     m
 });
 

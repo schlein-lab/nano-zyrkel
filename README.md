@@ -1,11 +1,11 @@
-# Zyrkel HAT Runner
+# nano-zyrkel
 
 Autonome Agenten die als GitHub Actions Workflows leben und 24/7 arbeiten.
 
-## Was ist ein HAT?
+## Was ist ein nano-zyrkel?
 
-Ein HAT (Headless Autonomous Task) ist ein leichtgewichtiger Agent der:
-- In einem GitHub-Repo als Action Workflow lebt
+Ein nano-zyrkel ist ein leichtgewichtiger autonomer Agent der:
+- In einem eigenen GitHub-Repo als Action Workflow lebt
 - Auf GitHubs Servern laeuft (nicht auf deinem Rechner)
 - Webseiten beobachtet, Daten trackt, an Fristen erinnert
 - Dich per Telegram benachrichtigt wenn etwas passiert
@@ -14,13 +14,13 @@ Ein HAT (Headless Autonomous Task) ist ein leichtgewichtiger Agent der:
 
 ## Schnellstart
 
-1. Dieses Repo forken/klonen
+1. Neues Repo erstellen (1 Repo = 1 nano-zyrkel)
 2. GitHub Secrets setzen: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-3. HAT-Config erstellen unter `hats/mein-hat.json`
-4. Workflow-YAML kopieren von `.github/workflows/hat-template.yml`
-5. Platzhalter ersetzen, pushen — HAT laeuft.
+3. Config erstellen unter `hats/mein-nano.json`
+4. Workflow-YAML aus Template erstellen
+5. Pushen — nano-zyrkel laeuft.
 
-## HAT-Typen
+## Typen
 
 | Typ | Beschreibung |
 |-----|-------------|
@@ -42,27 +42,12 @@ Ein HAT (Headless Autonomous Task) ist ein leichtgewichtiger Agent der:
 | `changed` | Inhalt hat sich geaendert (Hash-Vergleich) | Nein |
 | `extract_value` | Zahlenwert extrahieren + tracken | Nein |
 | `deadline_date` | Tage bis Frist berechnen | Nein |
-| `llm` | Natuerlichsprachige Frage an die Seite stellen | Ja (Haiku) |
+| `llm` | Natuerlichsprachige Frage an die Seite stellen | Ja |
 
 ## Sprachen
 
-HAT-Runner unterstuetzt Deutsch und Englisch.
+nano-zyrkel unterstuetzt Deutsch und Englisch.
 Konfigurierbar ueber `--lang de` oder `"lang": "en"` in der Config.
-
-## Verzeichnisstruktur
-
-```
-zyrkel-hat/
-├── .github/workflows/     ← HAT-Workflows (je einer pro HAT)
-├── hats/                  ← HAT-Konfigurationen (JSON)
-├── staging/               ← HAT-Ergebnisse (automatisch befuellt)
-│   └── {hat-id}/
-│       ├── latest.json    ← Letztes Ergebnis
-│       ├── history.jsonl  ← Alle bisherigen Checks
-│       └── state.json     ← Persistenter Zustand
-├── examples/hats/         ← Beispiel-Konfigurationen
-└── src/                   ← hat-runner Quellcode (Rust)
-```
 
 ## Lizenz
 

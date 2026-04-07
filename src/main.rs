@@ -14,7 +14,7 @@ mod output;
 use config::HatConfig;
 
 #[derive(Parser, Debug)]
-#[command(name = "hat-runner", about = "Zyrkel HAT — autonomous agent runner")]
+#[command(name = "nano-zyrkel", about = "nano-zyrkel — autonomous agent runner")]
 struct Cli {
     /// Path to HAT config JSON
     #[arg(short, long)]
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
         .with_env_filter(
             EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| {
-                    if cli.verbose { "hat_runner=debug".into() } else { "hat_runner=info".into() }
+                    if cli.verbose { "nano_zyrkel=debug".into() } else { "nano_zyrkel=info".into() }
                 }),
         )
         .compact()

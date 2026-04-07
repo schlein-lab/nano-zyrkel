@@ -1,13 +1,13 @@
 [package]
-name = "hat-runner"
+name = "nano-zyrkel"
 version = "0.1.0"
 edition = "2021"
 authors = ["Christian Schlein"]
 license = "MIT"
-description = "Zyrkel HAT runner — autonomous GitHub-native agents"
+description = "nano-zyrkel — autonomous GitHub-native agents for Zyrkel"
 
 [[bin]]
-name = "hat-runner"
+name = "nano-zyrkel"
 path = "src/main.rs"
 
 [dependencies]
