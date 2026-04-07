@@ -380,11 +380,9 @@ async fn llm_via_email(prompt: &str) -> Result<String> {
     let smtp_host = std::env::var("SMTP_HOST").unwrap_or_else(|_| "smtp.gmail.com".into());
     let nano_id = std::env::var("NANO_ID").unwrap_or_else(|_| "unknown".into());
 
-    let imap_host = std::env::var("IMAP_HOST").unwrap_or_else(|_| "imap.gmail.com".into());
-
-    // First: check IMAP for a pending answer from Headless
-    if let Ok(answer) = check_imap_for_answer(&imap_host, &smtp_user, &smtp_pass, &nano_id).await {
-        tracing::info!("Got pending LLM answer via Email");
+    // First: check staging/ for a pending answer (Headless pushes it via git)
+    if let Some(answer) = check_staging_for_answer(&nano_id) {
+        tracing::info!("Got pending LLM answer from Headless (via staging/)");
         return Ok(answer);
     }
 
@@ -398,48 +396,16 @@ async fn llm_via_email(prompt: &str) -> Result<String> {
     }).to_string())
 }
 
-/// Check IMAP for a reply from Headless (subject starts with "Re: nano:llm:{nano_id}")
-async fn check_imap_for_answer(host: &str, user: &str, pass: &str, nano_id: &str) -> Result<String> {
-    let host = host.to_string();
-    let user = user.to_string();
-    let pass = pass.to_string();
-    let nano_id = nano_id.to_string();
-
-    // imap crate is sync — run in blocking thread
-    tokio::task::spawn_blocking(move || {
-        let tls = native_tls::TlsConnector::new()?;
-        let client = imap::connect((&*host, 993), &host, &tls)?;
-        let mut session = client.login(&user, &pass)
-            .map_err(|e| anyhow::anyhow!("IMAP login failed: {}", e.0))?;
-
-        session.select("INBOX")?;
-
-        let query = format!("UNSEEN SUBJECT \"Re: nano:llm:{}\"", nano_id);
-        let uids = session.search(&query)?;
-
-        let mut answer: Option<String> = None;
-
-        if let Some(&uid) = uids.iter().last() {
-            let messages = session.fetch(uid.to_string(), "BODY[TEXT]")?;
-            for msg in messages.iter() {
-                if let Some(body) = msg.text() {
-                    answer = Some(
-                        std::str::from_utf8(body)
-                            .unwrap_or("")
-                            .trim()
-                            .to_string()
-                    );
-                }
-            }
-            // Mark as seen
-            let _ = session.store(uid.to_string(), "+FLAGS (\\Seen)");
-        }
-
-        session.logout()?;
-
-        answer.ok_or_else(|| anyhow::anyhow!("No pending email answer"))
-    })
-    .await?
+/// Check staging/ for a pending LLM answer from Headless.
+/// Headless reads the email, makes LLM call, pushes answer as file into the repo.
+fn check_staging_for_answer(nano_id: &str) -> Option<String> {
+    let path = format!("staging/{}/llm-answer.json", nano_id);
+    if let Ok(content) = std::fs::read_to_string(&path) {
+        let _ = std::fs::remove_file(&path); // consume answer
+        Some(content)
+    } else {
+        None
+    }
 }
 
 /// Send LLM request via SMTP to the shared mailbox (Headless picks it up)
