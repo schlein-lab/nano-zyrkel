@@ -13,6 +13,7 @@ mod literature;
 mod maildesk;
 mod notify;
 mod output;
+mod variant_classifier;
 
 use config::HatConfig;
 
@@ -72,6 +73,16 @@ async fn main() -> Result<()> {
             if hour == 6 { "crawl".into() } else { "poll".into() }
         });
         return literature::run(&config, &mode, cli.dry_run, &cli.lang).await;
+    }
+
+    // ── Variant Classifier: ACMG classification + VUS watchlist ──
+    if matches!(config.hat_type, config::HatType::VariantClassifier) {
+        let mode = std::env::var("RUN_MODE").unwrap_or_else(|_| {
+            let hour = chrono::Utc::now().hour();
+            let minute = chrono::Utc::now().minute();
+            if hour % 6 == 0 && minute < 15 { "vus-watch".into() } else { "poll".into() }
+        });
+        return variant_classifier::run(&config, &mode, cli.dry_run).await;
     }
 
     // ── Standard nano mode: fetch → condition → notify → act ──

@@ -63,7 +63,54 @@ pub struct HatConfig {
     /// Maildesk-specific config (only used when type = maildesk)
     #[serde(default)]
     pub maildesk: Option<MaildeskConfig>,
+
+    /// Variant classifier config (only used when type = variant_classifier)
+    #[serde(default)]
+    pub variant_classifier: Option<VariantClassifierConfig>,
 }
+
+/// Configuration for the Variant Classifier nano type.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VariantClassifierConfig {
+    /// IMAP host for inbox polling
+    #[serde(default = "default_imap_host")]
+    pub imap_host: String,
+    /// SMTP host for sending replies
+    #[serde(default = "default_smtp_host")]
+    pub smtp_host: String,
+    /// Reply display name
+    #[serde(default = "default_vc_reply_name")]
+    pub reply_name: String,
+    /// Keywords in email subject that trigger classification
+    #[serde(default = "default_vc_triggers")]
+    pub trigger_keywords: Vec<String>,
+    /// gnomAD AF threshold for PM2/BS1 (default: 0.01)
+    #[serde(default = "default_af_threshold")]
+    pub gnomad_af_threshold: f64,
+    /// Path to VUS watchlist JSON
+    #[serde(default = "default_vc_watchlist")]
+    pub watchlist_path: String,
+    /// Allowed sender addresses (empty = allow all)
+    #[serde(default)]
+    pub allowed_addresses: Vec<String>,
+    /// Allowed sender domains (empty = allow all)
+    #[serde(default)]
+    pub allowed_domains: Vec<String>,
+    /// Genome build (default: hg38)
+    #[serde(default = "default_vc_build")]
+    pub genome_build: String,
+    /// Response language
+    #[serde(default = "default_lang")]
+    pub response_language: String,
+}
+
+fn default_vc_reply_name() -> String { "ACMG Classifier".into() }
+fn default_vc_triggers() -> Vec<String> {
+    vec!["acmg".into(), "classify".into(), "variante".into(), "variant".into()]
+}
+fn default_af_threshold() -> f64 { 0.01 }
+fn default_vc_watchlist() -> String { "data/vus_watchlist.json".into() }
+fn default_vc_build() -> String { "hg38".into() }
 
 /// Configuration for the Maildesk nano type.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,6 +167,8 @@ pub enum HatType {
     Maildesk,
     /// Email-driven literature research alert (PubMed, bioRxiv, medRxiv, CrossRef)
     LiteratureAlert,
+    /// ACMG variant classification, VUS watchlist, prediction aggregation
+    VariantClassifier,
 }
 
 impl std::fmt::Display for HatType {
@@ -132,6 +181,7 @@ impl std::fmt::Display for HatType {
             Self::Guardian => write!(f, "guardian"),
             Self::Maildesk => write!(f, "maildesk"),
             Self::LiteratureAlert => write!(f, "literature_alert"),
+            Self::VariantClassifier => write!(f, "variant_classifier"),
         }
     }
 }
@@ -391,7 +441,32 @@ pub struct LiteratureConfig {
     /// Bouncer / access control
     #[serde(default)]
     pub bouncer: LiteratureBouncer,
+
+    /// Conference abstract sources (URLs to abstract books, program pages, etc.)
+    /// These require LLM (Codex) for extraction since they're unstructured.
+    #[serde(default)]
+    pub conferences: Vec<ConferenceSource>,
 }
+
+/// A conference abstract source — unstructured, needs LLM extraction.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConferenceSource {
+    /// Human-readable name (e.g. "ASHG 2026", "ESHG Annual Meeting")
+    pub name: String,
+    /// URL to the abstract listing page or abstract book
+    pub url: String,
+    /// Optional CSS selector to narrow the page content before sending to LLM
+    #[serde(default)]
+    pub selector: Option<String>,
+    /// Whether this is a paginated source (follow next-page links)
+    #[serde(default)]
+    pub paginated: bool,
+    /// Max pages to follow if paginated
+    #[serde(default = "default_max_pages")]
+    pub max_pages: u32,
+}
+
+fn default_max_pages() -> u32 { 5 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiteratureMailbox {

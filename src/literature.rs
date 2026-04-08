@@ -2,11 +2,11 @@
 //!
 //! Two modes:
 //!   poll  — Check IMAP inbox for new topic registrations (allowlist-gated)
-//!   crawl — Search PubMed/bioRxiv/medRxiv/CrossRef, send HTML digest per email
+//!   crawl — Search PubMed/bioRxiv/medRxiv/CrossRef + conference abstracts
 //!
 //! Structured sources (PubMed XML, bioRxiv JSON, CrossRef JSON) are parsed
-//! deterministically. Unstructured sources (conference abstract books, PDFs)
-//! use Codex CLI for extraction when available.
+//! deterministically. Unstructured sources (conference abstract books, program
+//! pages) use Codex CLI for LLM-based extraction when available.
 
 use anyhow::{Context, Result};
 use crate::config::HatConfig;
@@ -372,6 +372,8 @@ async fn crawl_and_digest(
             }
         }
 
+        // TODO: Conference abstracts — LLM-based extraction via Codex (not yet implemented)
+
         // Dedup by content hash
         let mut new_papers: Vec<Paper> = Vec::new();
         for p in all_papers {
@@ -387,13 +389,13 @@ async fn crawl_and_digest(
             continue;
         }
 
-        // Sort: PubMed first, then preprints, then conference
+        // Sort: PubMed first, then preprints, then conference/crossref
         new_papers.sort_by_key(|p| match p.source.as_str() {
             "PubMed" => 0,
             "bioRxiv" => 1,
             "medRxiv" => 2,
             "CrossRef" => 3,
-            _ => 9,
+            _ => 4, // Conference abstracts
         });
 
         tracing::info!("[crawl] {} new papers for '{}'", new_papers.len(), query);
@@ -677,6 +679,175 @@ async fn search_crossref(
     }
 
     Ok(papers)
+}
+
+// ---------------------------------------------------------------------------
+// Conference Abstracts (LLM-based extraction via Codex CLI)
+// ---------------------------------------------------------------------------
+
+async fn search_conference(
+    client: &reqwest::Client,
+    conf: &crate::config::ConferenceSource,
+    query: &str,
+    max_results: u32,
+) -> Result<Vec<Paper>> {
+    // 1. Fetch the page
+    let html = client.get(&conf.url).send().await?.text().await?;
+
+    // 2. Optional: narrow with CSS selector
+    let content = if let Some(ref sel) = conf.selector {
+        let document = scraper::Html::parse_document(&html);
+        match scraper::Selector::parse(sel) {
+            Ok(selector) => {
+                document.select(&selector)
+                    .map(|el| el.text().collect::<Vec<_>>().join(" "))
+                    .collect::<Vec<_>>()
+                    .join("\n\n")
+            }
+            Err(_) => {
+                tracing::warn!("[conference:{}] invalid selector '{}', using full page", conf.name, sel);
+                strip_html_to_text(&html)
+            }
+        }
+    } else {
+        strip_html_to_text(&html)
+    };
+
+    if content.trim().is_empty() {
+        return Ok(vec![]);
+    }
+
+    // 3. Truncate to ~12k chars for LLM context
+    let max_chars = 12000;
+    let truncated = if content.len() > max_chars {
+        &content[..max_chars]
+    } else {
+        &content
+    };
+
+    // 4. Build prompt for Codex — extract abstracts matching the query
+    let prompt = format!(
+        "Du bist ein wissenschaftlicher Literatur-Analyst.\n\
+         Durchsuche den folgenden Text von der Konferenz '{conf_name}' nach Abstracts \
+         die relevant sind fuer das Thema: \"{query}\"\n\n\
+         Fuer JEDEN relevanten Abstract, extrahiere:\n\
+         - title: Titel des Abstracts\n\
+         - authors: Autorenliste (Array von Strings)\n\
+         - abstract: Kerninhalt (max 300 Zeichen)\n\
+         - id: Abstract-Nummer falls vorhanden\n\n\
+         Antworte NUR mit JSON-Array. Keine Erklaerung. Max {max} Eintraege.\n\
+         Falls nichts relevant: antworte mit []\n\n\
+         TEXT:\n{text}",
+        conf_name = conf.name,
+        query = query,
+        max = max_results,
+        text = truncated,
+    );
+
+    // 5. Call Codex CLI (reuse pattern from condition.rs)
+    let answer = match call_codex_for_literature(&prompt).await {
+        Ok(a) => a,
+        Err(e) => {
+            tracing::warn!("[conference:{}] Codex unavailable: {}", conf.name, e);
+            return Ok(vec![]);
+        }
+    };
+
+    // 6. Parse JSON response into Papers
+    let parsed: Vec<serde_json::Value> = serde_json::from_str(&answer)
+        .or_else(|_| {
+            // Try to extract JSON array from response (Codex sometimes wraps in markdown)
+            let start = answer.find('[').unwrap_or(0);
+            let end = answer.rfind(']').map(|i| i + 1).unwrap_or(answer.len());
+            serde_json::from_str(&answer[start..end])
+        })
+        .unwrap_or_default();
+
+    let papers: Vec<Paper> = parsed.iter().filter_map(|item| {
+        let title = item["title"].as_str()?.to_string();
+        if title.is_empty() { return None; }
+
+        let authors: Vec<String> = item["authors"].as_array()
+            .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .unwrap_or_default();
+
+        let abstract_text = item["abstract"].as_str().unwrap_or("").to_string();
+        let abstract_id = item["id"].as_str().unwrap_or("").to_string();
+
+        Some(Paper {
+            source: format!("Conference: {}", conf.name),
+            pmid: String::new(),
+            title,
+            authors,
+            journal: conf.name.clone(),
+            date: String::new(),
+            r#abstract: abstract_text,
+            link: if abstract_id.is_empty() {
+                conf.url.clone()
+            } else {
+                format!("{}#{}", conf.url, abstract_id)
+            },
+            doi: String::new(),
+        })
+    }).collect();
+
+    Ok(papers)
+}
+
+/// Call Codex CLI for literature extraction.
+/// Falls back gracefully — conference abstracts are optional.
+async fn call_codex_for_literature(prompt: &str) -> Result<String> {
+    // Check if codex is available
+    let check = tokio::process::Command::new("codex")
+        .arg("--version")
+        .output()
+        .await;
+
+    if check.is_err() || !check.unwrap().status.success() {
+        anyhow::bail!("Codex CLI not available");
+    }
+
+    let output_file = format!("/tmp/nano-zyrkel-lit-{}.txt", std::process::id());
+
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(120),
+        tokio::process::Command::new("codex")
+            .args([
+                "exec",
+                "--skip-git-repo-check",
+                "--ephemeral",
+                "-o", &output_file,
+                prompt,
+            ])
+            .output(),
+    )
+    .await
+    .context("Codex CLI timeout after 120s")?
+    .context("Codex CLI execution failed")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("Codex error: {}", stderr.chars().take(200).collect::<String>());
+    }
+
+    let answer = tokio::fs::read_to_string(&output_file).await
+        .context("Failed to read Codex output")?;
+    let _ = tokio::fs::remove_file(&output_file).await;
+
+    Ok(answer.trim().to_string())
+}
+
+/// Strip HTML tags and collapse whitespace for LLM input.
+fn strip_html_to_text(html: &str) -> String {
+    let document = scraper::Html::parse_document(html);
+    let body_sel = scraper::Selector::parse("body").unwrap();
+    document.select(&body_sel)
+        .next()
+        .map(|el| el.text().collect::<Vec<_>>().join(" "))
+        .unwrap_or_default()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 // ---------------------------------------------------------------------------
