@@ -36,6 +36,10 @@ struct Cli {
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
+
+    /// Backfill: path to NCBI variant_summary.txt for full ClinVar import
+    #[arg(long)]
+    backfill: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -86,8 +90,16 @@ async fn main() -> Result<()> {
         return variant_classifier::run(&config, &mode, cli.dry_run).await;
     }
 
-    // ── ClinVar tracker: fetch variants, compute stats, generate widget ──
+    // ── ClinVar tracker ──
     if matches!(config.hat_type, config::HatType::ClinVar) {
+        // Backfill mode: parse full variant_summary.txt (one-time import)
+        if let Some(backfill_path) = &cli.backfill {
+            let staging_dir = format!("{}/{}", config.output_dir, config.id);
+            return clinvar::backfill::run_backfill(
+                &backfill_path.to_string_lossy(),
+                &staging_dir,
+            );
+        }
         return clinvar::run_clinvar(&config, cli.dry_run).await;
     }
 
