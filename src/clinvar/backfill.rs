@@ -121,20 +121,34 @@ fn parse_variant_summary(path: &str) -> Result<Vec<ClinVarVariant>> {
         let variation_id = get_field(&fields, &header_cols, "VariationID");
         let condition = get_field(&fields, &header_cols, "PhenotypeList");
         let assembly = get_field(&fields, &header_cols, "Assembly");
+        let chrom = get_field(&fields, &header_cols, "Chromosome");
+        let start = get_field(&fields, &header_cols, "Start");
+        let ref_vcf = get_field(&fields, &header_cols, "ReferenceAlleleVCF");
+        let alt_vcf = get_field(&fields, &header_cols, "AlternateAlleleVCF");
+        let phenotype_ids_raw = get_field(&fields, &header_cols, "PhenotypeIDS");
 
         // Skip if essential fields missing
         if gene.is_empty() || gene == "-" || gene == "." { continue; }
         if significance.is_empty() || significance == "-" { continue; }
         if variation_id.is_empty() { continue; }
 
-        // Prefer GRCh38 rows, but accept GRCh37 if no GRCh38 available
-        // (deduplicate later keeps the latest)
-        let _ = assembly; // We keep both, dedup handles it
+        // Prefer GRCh38 rows — skip GRCh37 if we'll get GRCh38 later (dedup handles it)
+        let _ = assembly;
 
         let eval_date = normalize_date(last_eval);
 
         // Skip multi-gene CNVs (e.g. "subset of 121 genes: MBD5")
         if gene.contains("subset of") || gene.contains(';') { continue; }
+
+        // Parse genomic position
+        let pos: u64 = start.parse().unwrap_or(0);
+
+        // Clean phenotype IDs (keep OMIM, MedGen, MONDO, Orphanet references)
+        let phenotype_ids = if phenotype_ids_raw == "-" || phenotype_ids_raw.is_empty() {
+            String::new()
+        } else {
+            phenotype_ids_raw.to_string()
+        };
 
         variants.push(ClinVarVariant {
             variation_id: variation_id.to_string(),
@@ -146,6 +160,11 @@ fn parse_variant_summary(path: &str) -> Result<Vec<ClinVarVariant>> {
             last_evaluated: eval_date.clone(),
             condition: condition.to_string(),
             first_seen: eval_date,
+            chrom: chrom.to_string(),
+            pos,
+            ref_allele: ref_vcf.to_string(),
+            alt_allele: alt_vcf.to_string(),
+            phenotype_ids,
         });
 
         if line_num % 500_000 == 0 && line_num > 0 {
