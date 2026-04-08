@@ -213,11 +213,15 @@ fn detect_historical_reclassifications(variants: &[ClinVarVariant]) -> Vec<Recla
 }
 
 /// Build a compact index for the frontend.
+/// Contains everything the browser needs without loading variant data.
 fn build_index(variants: &[ClinVarVariant], reclassifications: &[ReclassificationEvent]) -> serde_json::Value {
     let mut gene_counts: HashMap<String, u32> = HashMap::new();
     let mut class_counts: HashMap<String, u32> = HashMap::new();
     let mut date_min = String::from("9999");
     let mut date_max = String::from("0000");
+
+    // Per-gene classification breakdown: gene → {path, lpath, vus, lben, ben, confl}
+    let mut gene_class: HashMap<String, [u32; 7]> = HashMap::new();
 
     for v in variants {
         *gene_counts.entry(v.gene.clone()).or_default() += 1;
@@ -226,6 +230,17 @@ fn build_index(variants: &[ClinVarVariant], reclassifications: &[Reclassificatio
             if v.last_evaluated < date_min { date_min = v.last_evaluated.clone(); }
             if v.last_evaluated > date_max { date_max = v.last_evaluated.clone(); }
         }
+
+        let gc = gene_class.entry(v.gene.clone()).or_default();
+        match v.classification {
+            Classification::Pathogenic => gc[0] += 1,
+            Classification::LikelyPathogenic => gc[1] += 1,
+            Classification::Vus => gc[2] += 1,
+            Classification::LikelyBenign => gc[3] += 1,
+            Classification::Benign => gc[4] += 1,
+            Classification::ConflictingInterpretations => gc[5] += 1,
+            Classification::Other(_) => gc[6] += 1,
+        }
     }
 
     // Top 50 genes
@@ -233,12 +248,33 @@ fn build_index(variants: &[ClinVarVariant], reclassifications: &[Reclassificatio
     top_genes.sort_by(|a, b| b.1.cmp(&a.1));
     top_genes.truncate(50);
 
+    // Gene breakdowns for top 50 + key clinical genes
+    let focus_genes: Vec<String> = {
+        let mut g: Vec<String> = top_genes.iter().map(|(n, _)| n.clone()).collect();
+        for extra in ["LDLR", "BRCA1", "BRCA2", "TP53", "MLH1", "MSH2", "CFTR", "MYH7", "SCN5A", "PALB2"] {
+            if !g.contains(&extra.to_string()) { g.push(extra.to_string()); }
+        }
+        g
+    };
+
+    let gene_breakdowns: HashMap<String, serde_json::Value> = focus_genes.iter()
+        .filter_map(|g| {
+            gene_class.get(g).map(|c| (g.clone(), serde_json::json!({
+                "total": c.iter().sum::<u32>(),
+                "pathogenic": c[0], "likely_pathogenic": c[1],
+                "vus": c[2], "likely_benign": c[3], "benign": c[4],
+                "conflicting": c[5], "other": c[6],
+            })))
+        })
+        .collect();
+
     serde_json::json!({
         "total_variants": variants.len(),
         "total_reclassifications": reclassifications.len(),
         "date_range": { "from": date_min, "to": date_max },
         "classifications": class_counts,
         "top_genes": top_genes,
+        "gene_breakdowns": gene_breakdowns,
         "generated_at": chrono::Utc::now().to_rfc3339(),
     })
 }
