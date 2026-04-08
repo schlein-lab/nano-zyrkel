@@ -43,7 +43,7 @@ fn format_message(notify: &Notify, config: &HatConfig, result: &ConditionResult)
     }
 }
 
-async fn send_telegram(message: &str, lang: &str) -> Result<()> {
+pub async fn send_telegram(message: &str, lang: &str) -> Result<()> {
     let token = std::env::var("TELEGRAM_BOT_TOKEN")
         .map_err(|_| anyhow::anyhow!("TELEGRAM_BOT_TOKEN not set"))?;
     let chat_id = std::env::var("TELEGRAM_CHAT_ID")

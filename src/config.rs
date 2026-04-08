@@ -67,6 +67,10 @@ pub struct HatConfig {
     /// Variant classifier config (only used when type = variant_classifier)
     #[serde(default)]
     pub variant_classifier: Option<VariantClassifierConfig>,
+
+    /// ClinVar-specific config (only used when type = clinvar)
+    #[serde(default)]
+    pub clinvar: Option<ClinVarConfig>,
 }
 
 /// Configuration for the Variant Classifier nano type.
@@ -150,6 +154,36 @@ fn default_max_emails() -> u32 { 5 }
 fn default_max_codex_chars() -> usize { 12000 }
 fn default_max_preview() -> usize { 2400 }
 
+/// Configuration for the ClinVar tracker nano type.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinVarConfig {
+    /// Max variants to fetch per run
+    #[serde(default = "default_cv_max_variants")]
+    pub max_variants_per_run: u32,
+    /// Delay between NCBI API requests (ms) — rate limit compliance
+    #[serde(default = "default_cv_delay")]
+    pub request_delay_ms: u64,
+    /// Send Telegram on reclassification events
+    #[serde(default = "default_true")]
+    pub notify_reclassifications: bool,
+    /// Send Telegram on new pathogenic variants
+    #[serde(default = "default_true")]
+    pub notify_new_pathogenic: bool,
+    /// Generate HTML widget report
+    #[serde(default = "default_true")]
+    pub generate_html: bool,
+    /// Track only specific genes (empty = all)
+    #[serde(default)]
+    pub track_genes: Vec<String>,
+    /// NCBI API key (optional, increases rate limit from 3 to 10 req/sec)
+    #[serde(default)]
+    pub ncbi_api_key: Option<String>,
+}
+
+fn default_cv_max_variants() -> u32 { 100 }
+fn default_cv_delay() -> u64 { 350 }
+fn default_true() -> bool { true }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HatType {
@@ -169,6 +203,8 @@ pub enum HatType {
     LiteratureAlert,
     /// ACMG variant classification, VUS watchlist, prediction aggregation
     VariantClassifier,
+    /// ClinVar VUS reclassification + submission tracker
+    ClinVar,
 }
 
 impl std::fmt::Display for HatType {
@@ -182,6 +218,7 @@ impl std::fmt::Display for HatType {
             Self::Maildesk => write!(f, "maildesk"),
             Self::LiteratureAlert => write!(f, "literature_alert"),
             Self::VariantClassifier => write!(f, "variant_classifier"),
+            Self::ClinVar => write!(f, "clinvar"),
         }
     }
 }

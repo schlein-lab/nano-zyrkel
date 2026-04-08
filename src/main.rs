@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 
 mod action;
+mod clinvar;
 mod config;
 mod condition;
 mod fetch;
@@ -83,6 +84,11 @@ async fn main() -> Result<()> {
             if hour % 6 == 0 && minute < 15 { "vus-watch".into() } else { "poll".into() }
         });
         return variant_classifier::run(&config, &mode, cli.dry_run).await;
+    }
+
+    // ── ClinVar tracker: fetch variants, compute stats, generate widget ──
+    if matches!(config.hat_type, config::HatType::ClinVar) {
+        return clinvar::run_clinvar(&config, cli.dry_run).await;
     }
 
     // ── Standard nano mode: fetch → condition → notify → act ──
