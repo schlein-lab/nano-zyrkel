@@ -62,6 +62,11 @@ pub fn run_backfill(path: &str, output_dir: &str) -> Result<()> {
     std::fs::write(&index_path, serde_json::to_string_pretty(&index)?)?;
     tracing::info!("[backfill] Wrote index to {}", index_path);
 
+    // RSS feed of classification changes
+    let rss_path = format!("{}/feed.xml", output_dir);
+    generate_rss(&rss_path, &reclassifications)?;
+    tracing::info!("[backfill] Wrote RSS feed to {}", rss_path);
+
     // Summary stats
     let vus_count = deduped.iter().filter(|v| matches!(v.classification, Classification::Vus)).count();
     let path_count = deduped.iter().filter(|v| matches!(v.classification, Classification::Pathogenic | Classification::LikelyPathogenic)).count();
@@ -397,4 +402,45 @@ fn normalize_date(raw: &str) -> String {
 
     // Fallback: return as-is (will still work, just may not sort perfectly)
     raw.to_string()
+}
+
+/// Generate RSS feed of recent classification changes.
+fn generate_rss(path: &str, events: &[ReclassificationEvent]) -> Result<()> {
+    use std::io::Write;
+    let file = std::fs::File::create(path)?;
+    let mut w = std::io::BufWriter::new(file);
+
+    writeln!(w, r#"<?xml version="1.0" encoding="UTF-8"?>"#)?;
+    writeln!(w, r#"<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">"#)?;
+    writeln!(w, "<channel>")?;
+    writeln!(w, "<title>nano-zyrkel-vusTracker — Classification Changes</title>")?;
+    writeln!(w, "<link>https://schlein-lab.github.io/nano-zyrkel-vusTracker/</link>")?;
+    writeln!(w, "<description>ClinVar variant classification changes detected by nano-zyrkel</description>")?;
+    writeln!(w, "<language>en</language>")?;
+    writeln!(w, "<lastBuildDate>{}</lastBuildDate>", chrono::Utc::now().to_rfc2822())?;
+
+    // Latest 50 events (sorted by date, newest first)
+    let mut sorted: Vec<&ReclassificationEvent> = events.iter().collect();
+    sorted.sort_by(|a, b| b.detected_at.cmp(&a.detected_at));
+
+    for e in sorted.iter().take(50) {
+        let title = format!("{} {} → {}", e.gene, e.old.short(), e.new.short());
+        let desc = format!("{} in gene {} changed from {} to {} ({})",
+            e.hgvs, e.gene, e.old, e.new, e.submitter);
+        let link = format!("https://www.ncbi.nlm.nih.gov/clinvar/variation/{}/", e.variation_id);
+        writeln!(w, "<item>")?;
+        writeln!(w, "  <title>{}</title>", xml_esc(&title))?;
+        writeln!(w, "  <description>{}</description>", xml_esc(&desc))?;
+        writeln!(w, "  <link>{}</link>", link)?;
+        writeln!(w, "  <guid>{}</guid>", link)?;
+        writeln!(w, "  <pubDate>{}</pubDate>", e.detected_at)?;
+        writeln!(w, "</item>")?;
+    }
+
+    writeln!(w, "</channel></rss>")?;
+    Ok(())
+}
+
+fn xml_esc(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
