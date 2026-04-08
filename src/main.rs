@@ -21,7 +21,7 @@ use config::HatConfig;
 #[derive(Parser, Debug)]
 #[command(name = "nano-zyrkel", about = "nano-zyrkel — autonomous agent runner")]
 struct Cli {
-    /// Path to HAT config JSON
+    /// Path to nano config JSON
     #[arg(short, long)]
     config: PathBuf,
 
@@ -37,9 +37,31 @@ struct Cli {
     #[arg(short, long)]
     verbose: bool,
 
-    /// Backfill: path to NCBI variant_summary.txt for full ClinVar import
+    /// Backfill: path to bulk data file for one-time import.
+    /// Each nano type decides how to handle this (e.g., ClinVar: variant_summary.txt)
     #[arg(long)]
     backfill: Option<PathBuf>,
+}
+
+/// Generic backfill dispatch — each nano type handles its own bulk import.
+fn run_backfill(config: &HatConfig, path: &str, staging_dir: &str) -> Result<()> {
+    match &config.hat_type {
+        config::HatType::ClinVar => {
+            clinvar::backfill::run_backfill(path, staging_dir)
+        }
+        config::HatType::LiteratureAlert => {
+            anyhow::bail!("Backfill not yet implemented for LiteratureAlert. \
+                Future: import PubMed XML baseline files.")
+        }
+        config::HatType::VariantClassifier => {
+            anyhow::bail!("Backfill not yet implemented for VariantClassifier. \
+                Future: import ClinGen/gnomAD bulk data.")
+        }
+        other => {
+            anyhow::bail!("Backfill not supported for nano type '{}'. \
+                Only data-heavy nano types support --backfill.", other)
+        }
+    }
 }
 
 #[tokio::main]
@@ -66,6 +88,12 @@ async fn main() -> Result<()> {
         i18n::msg(&cli.lang, "hat_starting", &[&config.id])
     );
 
+    // ── Backfill mode: any nano type can support bulk data import ──
+    if let Some(backfill_path) = &cli.backfill {
+        let staging_dir = format!("{}/{}", config.output_dir, config.id);
+        return run_backfill(&config, &backfill_path.to_string_lossy(), &staging_dir);
+    }
+
     // ── Maildesk mode: completely different flow ──
     if matches!(config.hat_type, config::HatType::Maildesk) {
         return maildesk::run_maildesk(&config, cli.dry_run).await;
@@ -90,16 +118,8 @@ async fn main() -> Result<()> {
         return variant_classifier::run(&config, &mode, cli.dry_run).await;
     }
 
-    // ── ClinVar tracker ──
+    // ── ClinVar tracker: fetch variants, compute stats, generate widget ──
     if matches!(config.hat_type, config::HatType::ClinVar) {
-        // Backfill mode: parse full variant_summary.txt (one-time import)
-        if let Some(backfill_path) = &cli.backfill {
-            let staging_dir = format!("{}/{}", config.output_dir, config.id);
-            return clinvar::backfill::run_backfill(
-                &backfill_path.to_string_lossy(),
-                &staging_dir,
-            );
-        }
         return clinvar::run_clinvar(&config, cli.dry_run).await;
     }
 
