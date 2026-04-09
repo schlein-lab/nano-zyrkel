@@ -274,7 +274,6 @@ nano-zyrkel powers a growing collection of specialized agents:
 | **Showcase** | Cinematic widget portal for all nano-zyrkels | [Repo](https://github.com/schlein-lab/nano-zyrkel-showcase) · [Live](https://schlein-lab.github.io/nano-zyrkel-showcase/) |
 | **Incoming** | Security-hardened public ingress channel (zero-trust) | [Repo](https://github.com/schlein-lab/nano-zyrkel-incoming) |
 | **literatureAlert** | PubMed / bioRxiv / medRxiv daily digest | Private |
-| **variant-classifier** | ACMG classification + VUS watchlist | Private |
 | **maildesk** | Semi-autonomous email agent with Telegram approval | Private |
 
 ## Zyrkel Headless Integration
