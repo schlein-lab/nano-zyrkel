@@ -479,31 +479,18 @@ pub struct LiteratureConfig {
     #[serde(default)]
     pub bouncer: LiteratureBouncer,
 
-    /// Conference abstract sources (URLs to abstract books, program pages, etc.)
-    /// These require LLM (Codex) for extraction since they're unstructured.
-    #[serde(default)]
-    pub conferences: Vec<ConferenceSource>,
+    /// Enable automatic conference discovery via LLM (requires Codex)
+    /// When true, the bot autonomously finds relevant conferences for each topic.
+    #[serde(default = "default_true_bool")]
+    pub conference_discovery: bool,
+
+    /// Max conference sources to discover per topic per crawl
+    #[serde(default = "default_max_conferences")]
+    pub max_conferences_per_topic: u32,
 }
 
-/// A conference abstract source — unstructured, needs LLM extraction.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConferenceSource {
-    /// Human-readable name (e.g. "ASHG 2026", "ESHG Annual Meeting")
-    pub name: String,
-    /// URL to the abstract listing page or abstract book
-    pub url: String,
-    /// Optional CSS selector to narrow the page content before sending to LLM
-    #[serde(default)]
-    pub selector: Option<String>,
-    /// Whether this is a paginated source (follow next-page links)
-    #[serde(default)]
-    pub paginated: bool,
-    /// Max pages to follow if paginated
-    #[serde(default = "default_max_pages")]
-    pub max_pages: u32,
-}
-
-fn default_max_pages() -> u32 { 5 }
+fn default_true_bool() -> bool { true }
+fn default_max_conferences() -> u32 { 5 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiteratureMailbox {

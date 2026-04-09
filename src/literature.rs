@@ -372,7 +372,18 @@ async fn crawl_and_digest(
             }
         }
 
-        // TODO: Conference abstracts — LLM-based extraction via Codex (not yet implemented)
+        // Conference abstracts — autonomous discovery + LLM extraction via Codex
+        if lit.conference_discovery {
+            match discover_and_search_conferences(
+                &client, query, lit.max_conferences_per_topic
+            ).await {
+                Ok(papers) => {
+                    tracing::info!("[conferences] {} results from auto-discovery", papers.len());
+                    all_papers.extend(papers);
+                }
+                Err(e) => tracing::warn!("[conferences] {}", e),
+            }
+        }
 
         // Dedup by content hash
         let mut new_papers: Vec<Paper> = Vec::new();
@@ -682,116 +693,170 @@ async fn search_crossref(
 }
 
 // ---------------------------------------------------------------------------
-// Conference Abstracts (LLM-based extraction via Codex CLI)
+// Conference Abstracts — Autonomous Discovery + LLM Extraction via Codex
 // ---------------------------------------------------------------------------
 
-async fn search_conference(
+/// Two-phase conference search:
+///   Phase 1 (Codex): "Which conferences/abstract books are relevant for this topic?"
+///                     → returns URLs to abstract listings/books
+///   Phase 2 (Codex): For each URL, fetch page → extract relevant abstracts
+async fn discover_and_search_conferences(
     client: &reqwest::Client,
-    conf: &crate::config::ConferenceSource,
     query: &str,
-    max_results: u32,
+    max_conferences: u32,
 ) -> Result<Vec<Paper>> {
-    // 1. Fetch the page
-    let html = client.get(&conf.url).send().await?.text().await?;
-
-    // 2. Optional: narrow with CSS selector
-    let content = if let Some(ref sel) = conf.selector {
-        let document = scraper::Html::parse_document(&html);
-        match scraper::Selector::parse(sel) {
-            Ok(selector) => {
-                document.select(&selector)
-                    .map(|el| el.text().collect::<Vec<_>>().join(" "))
-                    .collect::<Vec<_>>()
-                    .join("\n\n")
-            }
-            Err(_) => {
-                tracing::warn!("[conference:{}] invalid selector '{}', using full page", conf.name, sel);
-                strip_html_to_text(&html)
-            }
-        }
-    } else {
-        strip_html_to_text(&html)
-    };
-
-    if content.trim().is_empty() {
-        return Ok(vec![]);
-    }
-
-    // 3. Truncate to ~12k chars for LLM context
-    let max_chars = 12000;
-    let truncated = if content.len() > max_chars {
-        &content[..max_chars]
-    } else {
-        &content
-    };
-
-    // 4. Build prompt for Codex — extract abstracts matching the query
-    let prompt = format!(
-        "Du bist ein wissenschaftlicher Literatur-Analyst.\n\
-         Durchsuche den folgenden Text von der Konferenz '{conf_name}' nach Abstracts \
-         die relevant sind fuer das Thema: \"{query}\"\n\n\
-         Fuer JEDEN relevanten Abstract, extrahiere:\n\
-         - title: Titel des Abstracts\n\
-         - authors: Autorenliste (Array von Strings)\n\
-         - abstract: Kerninhalt (max 300 Zeichen)\n\
-         - id: Abstract-Nummer falls vorhanden\n\n\
-         Antworte NUR mit JSON-Array. Keine Erklaerung. Max {max} Eintraege.\n\
-         Falls nichts relevant: antworte mit []\n\n\
-         TEXT:\n{text}",
-        conf_name = conf.name,
+    // Phase 1: Ask Codex to discover relevant conference abstract sources
+    let discovery_prompt = format!(
+        "Du bist ein wissenschaftlicher Konferenz-Experte.\n\
+         Fuer das Forschungsthema: \"{query}\"\n\n\
+         Nenne die {max} wichtigsten Konferenzen die aktuell (2025-2026) \
+         online zugaengliche Abstract Books oder Abstract-Suchseiten haben.\n\n\
+         Antworte NUR mit JSON-Array. Jeder Eintrag:\n\
+         - name: Konferenzname (z.B. \"ASHG 2026\", \"ESHG Annual Meeting 2026\")\n\
+         - url: Direkte URL zur Abstract-Seite/Suchseite/Abstract-Book\n\
+         - search_url: Falls die Seite eine Suchfunktion hat, die URL mit Query-Parameter \
+           (ersetze das Suchwort mit {{QUERY}}). Sonst null.\n\n\
+         Nur Konferenzen mit ECHTEN, funktionierenden URLs. Keine erfundenen Links.\n\
+         Falls du dir bei einer URL nicht sicher bist, lass sie weg.\n\
+         Antworte mit [] falls nichts passt.",
         query = query,
-        max = max_results,
-        text = truncated,
+        max = max_conferences,
     );
 
-    // 5. Call Codex CLI (reuse pattern from condition.rs)
-    let answer = match call_codex_for_literature(&prompt).await {
+    let discovery_answer = match call_codex_for_literature(&discovery_prompt).await {
         Ok(a) => a,
         Err(e) => {
-            tracing::warn!("[conference:{}] Codex unavailable: {}", conf.name, e);
+            tracing::info!("[conferences] Codex unavailable, skipping: {}", e);
             return Ok(vec![]);
         }
     };
 
-    // 6. Parse JSON response into Papers
-    let parsed: Vec<serde_json::Value> = serde_json::from_str(&answer)
+    let conferences: Vec<serde_json::Value> = parse_json_array(&discovery_answer);
+    if conferences.is_empty() {
+        tracing::info!("[conferences] no conferences discovered for '{}'", query);
+        return Ok(vec![]);
+    }
+
+    tracing::info!("[conferences] discovered {} conferences for '{}'", conferences.len(), query);
+
+    // Phase 2: For each conference, fetch + extract
+    let mut all_papers: Vec<Paper> = Vec::new();
+
+    for conf in &conferences {
+        let name = conf["name"].as_str().unwrap_or("Unknown Conference");
+        let base_url = conf["url"].as_str().unwrap_or("");
+        let search_url_tpl = conf["search_url"].as_str();
+
+        if base_url.is_empty() { continue; }
+
+        // Use search URL if available, otherwise base URL
+        let fetch_url = if let Some(tpl) = search_url_tpl {
+            tpl.replace("{{QUERY}}", &urlencoding(query))
+        } else {
+            base_url.to_string()
+        };
+
+        tracing::info!("[conference:{}] fetching {}", name, fetch_url);
+
+        // Fetch the page
+        let html = match client.get(&fetch_url).send().await {
+            Ok(resp) if resp.status().is_success() => {
+                match resp.text().await {
+                    Ok(t) => t,
+                    Err(e) => { tracing::warn!("[conference:{}] body read failed: {}", name, e); continue; }
+                }
+            }
+            Ok(resp) => {
+                tracing::warn!("[conference:{}] HTTP {}", name, resp.status());
+                continue;
+            }
+            Err(e) => {
+                tracing::warn!("[conference:{}] fetch failed: {}", name, e);
+                continue;
+            }
+        };
+
+        let text = strip_html_to_text(&html);
+        if text.len() < 100 {
+            tracing::warn!("[conference:{}] page too short ({}b), skipping", name, text.len());
+            continue;
+        }
+
+        // Truncate for LLM context
+        let max_chars = 12000;
+        let truncated = if text.len() > max_chars { &text[..max_chars] } else { &text };
+
+        // Extract relevant abstracts
+        let extract_prompt = format!(
+            "Du bist ein wissenschaftlicher Literatur-Analyst.\n\
+             Durchsuche den folgenden Text von der Konferenz '{name}' nach Abstracts \
+             die relevant sind fuer: \"{query}\"\n\n\
+             Fuer JEDEN relevanten Abstract:\n\
+             - title: Titel\n\
+             - authors: Autorenliste (Array)\n\
+             - abstract: Kerninhalt (max 300 Zeichen)\n\
+             - id: Abstract-Nummer falls vorhanden\n\n\
+             NUR JSON-Array. Max 10 Eintraege. [] falls nichts relevant.\n\n\
+             TEXT:\n{text}",
+            name = name,
+            query = query,
+            text = truncated,
+        );
+
+        let extract_answer = match call_codex_for_literature(&extract_prompt).await {
+            Ok(a) => a,
+            Err(e) => {
+                tracing::warn!("[conference:{}] extraction failed: {}", name, e);
+                continue;
+            }
+        };
+
+        let abstracts = parse_json_array(&extract_answer);
+        for item in &abstracts {
+            let title = match item["title"].as_str() {
+                Some(t) if !t.is_empty() => t.to_string(),
+                _ => continue,
+            };
+
+            let authors: Vec<String> = item["authors"].as_array()
+                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .unwrap_or_default();
+
+            let abstract_text = item["abstract"].as_str().unwrap_or("").to_string();
+            let abstract_id = item["id"].as_str().unwrap_or("").to_string();
+
+            all_papers.push(Paper {
+                source: format!("Conference: {}", name),
+                pmid: String::new(),
+                title,
+                authors,
+                journal: name.to_string(),
+                date: String::new(),
+                r#abstract: abstract_text,
+                link: if abstract_id.is_empty() {
+                    fetch_url.clone()
+                } else {
+                    format!("{}#{}", fetch_url, abstract_id)
+                },
+                doi: String::new(),
+            });
+        }
+
+        tracing::info!("[conference:{}] {} relevant abstracts", name, abstracts.len());
+    }
+
+    Ok(all_papers)
+}
+
+/// Parse a JSON array from LLM output, tolerating markdown wrapping.
+fn parse_json_array(raw: &str) -> Vec<serde_json::Value> {
+    serde_json::from_str(raw)
         .or_else(|_| {
-            // Try to extract JSON array from response (Codex sometimes wraps in markdown)
-            let start = answer.find('[').unwrap_or(0);
-            let end = answer.rfind(']').map(|i| i + 1).unwrap_or(answer.len());
-            serde_json::from_str(&answer[start..end])
+            let start = raw.find('[').unwrap_or(0);
+            let end = raw.rfind(']').map(|i| i + 1).unwrap_or(raw.len());
+            serde_json::from_str(&raw[start..end])
         })
-        .unwrap_or_default();
-
-    let papers: Vec<Paper> = parsed.iter().filter_map(|item| {
-        let title = item["title"].as_str()?.to_string();
-        if title.is_empty() { return None; }
-
-        let authors: Vec<String> = item["authors"].as_array()
-            .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-            .unwrap_or_default();
-
-        let abstract_text = item["abstract"].as_str().unwrap_or("").to_string();
-        let abstract_id = item["id"].as_str().unwrap_or("").to_string();
-
-        Some(Paper {
-            source: format!("Conference: {}", conf.name),
-            pmid: String::new(),
-            title,
-            authors,
-            journal: conf.name.clone(),
-            date: String::new(),
-            r#abstract: abstract_text,
-            link: if abstract_id.is_empty() {
-                conf.url.clone()
-            } else {
-                format!("{}#{}", conf.url, abstract_id)
-            },
-            doi: String::new(),
-        })
-    }).collect();
-
-    Ok(papers)
+        .unwrap_or_default()
 }
 
 /// Call Codex CLI for literature extraction.
