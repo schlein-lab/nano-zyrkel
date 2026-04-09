@@ -33,7 +33,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh release download -R christian-schlein/nano-zyrkel -p "nano-zyrkel-linux" --clobber
+          gh release download -R schlein-lab/nano-zyrkel -p "nano-zyrkel-linux" --clobber
           chmod +x nano-zyrkel-linux
           mv nano-zyrkel-linux nano-zyrkel
 

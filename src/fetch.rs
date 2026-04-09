@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use crate::config::Source;
 
-const USER_AGENT: &str = "ZyrkelHAT/0.1 (https://github.com/christian-schlein/zyrkel)";
+const USER_AGENT: &str = "nano-zyrkel/0.1 (https://github.com/schlein-lab/nano-zyrkel)";
 const TIMEOUT_SECS: u64 = 30;
 const MAX_RETRIES: u32 = 3;
 const RETRY_DELAY_MS: u64 = 2000;
