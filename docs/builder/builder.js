@@ -4,7 +4,7 @@
 // renders a form per template based on its declared slots, and produces a
 // downloadable zip of the materialised repo. Pure browser, no backend.
 
-const RAW_BASE = "https://raw.githubusercontent.com/schlein-lab/nano-zyrkel/main";
+const RAW_BASE = "https://raw.githubusercontent.com/schlein-lab/nano-zyrkel/master";
 const TPL_BASE = `${RAW_BASE}/templates`;
 
 const state = {
