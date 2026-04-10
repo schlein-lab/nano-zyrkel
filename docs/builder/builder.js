@@ -1,132 +1,604 @@
 /* ═══════════════════════════════════════════════════════════════
    nano-zyrkel Project Studio — builder.js
-   Two-panel Baukasten + Vorschau builder.
+   BioRender-style visual catalog + live preview canvas
    ═══════════════════════════════════════════════════════════════ */
+
+// ─── MINI VISUAL GENERATORS ─────────────────────────────────
+
+function miniLineChart(color, points) {
+  const pts = points || '0,35 15,28 30,32 45,18 60,22 75,8 100,12';
+  return `<svg viewBox="0 0 100 40" class="mini-chart">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="${pts}" fill="url(#grad-${color.replace('#','')})" stroke="none" opacity="0.15"/>
+    <defs><linearGradient id="grad-${color.replace('#','')}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}"/><stop offset="100%" stop-color="transparent"/>
+    </linearGradient></defs>
+  </svg>`;
+}
+
+function miniBarChart(color) {
+  const bars = [28, 18, 35, 12, 24, 30, 20];
+  return `<svg viewBox="0 0 100 40" class="mini-chart">
+    ${bars.map((h, i) => `<rect x="${i*14+2}" y="${40-h}" width="10" height="${h}" rx="2" fill="${color}" opacity="${0.5 + (i % 3) * 0.15}"/>`).join('')}
+  </svg>`;
+}
+
+function miniThresholdChart(color) {
+  return `<svg viewBox="0 0 100 50" class="mini-chart">
+    <line x1="0" y1="20" x2="100" y2="20" stroke="${color}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+    <text x="2" y="18" fill="${color}" font-size="5" opacity="0.7">Schwelle</text>
+    <polyline points="0,35 12,30 24,28 36,22 48,15 60,18 72,10 84,25 100,20" fill="none" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="72" cy="10" r="3" fill="#ef4444" opacity="0.8"/>
+  </svg>`;
+}
+
+function miniBrowser(urlText, bodyContent) {
+  return `<div class="mini-browser">
+    <div class="mini-browser-bar">
+      <span class="mini-browser-dot" style="background:#ef4444"></span>
+      <span class="mini-browser-dot" style="background:#f59e0b"></span>
+      <span class="mini-browser-dot" style="background:#22c55e"></span>
+      <span class="mini-browser-url">${urlText}</span>
+    </div>
+    <div class="mini-browser-body">${bodyContent}</div>
+  </div>`;
+}
+
+function miniJson(jsonLines) {
+  return `<div class="mini-json">${jsonLines}</div>`;
+}
+
+function miniTelegram() {
+  return `<div class="mini-tg">
+    <div class="mini-tg-bubble">&#128276; <b>Aenderung erkannt!</b><br>Seite wurde aktualisiert...</div>
+    <span class="mini-tg-time">14:32</span>
+  </div>`;
+}
+
+function miniDiscord() {
+  return `<div class="mini-discord">
+    <div class="mini-discord-header">
+      <div class="mini-discord-avatar"></div>
+      <span class="mini-discord-name">nano-zyrkel</span>
+    </div>
+    <div class="mini-discord-embed">
+      <div class="mini-discord-embed-line" style="width:80%"></div>
+      <div class="mini-discord-embed-line" style="width:60%"></div>
+      <div class="mini-discord-embed-line" style="width:45%"></div>
+    </div>
+  </div>`;
+}
+
+function miniSlack() {
+  return `<div class="mini-slack">
+    <div class="mini-slack-avatar"></div>
+    <div class="mini-slack-body">
+      <span class="mini-slack-name">nano-zyrkel</span>
+      <div class="mini-slack-line" style="width:85%"></div>
+      <div class="mini-slack-line" style="width:60%"></div>
+    </div>
+  </div>`;
+}
+
+function miniEmailCard() {
+  return `<div class="mini-email-card">
+    <div class="mini-email-header">
+      <div class="mini-email-header-line" style="width:30%; flex-shrink:0"></div>
+      <div class="mini-email-header-line" style="width:55%"></div>
+    </div>
+    <div class="mini-email-body">
+      <div class="mini-email-body-line" style="width:90%"></div>
+      <div class="mini-email-body-line" style="width:70%"></div>
+      <div class="mini-email-body-line" style="width:55%"></div>
+    </div>
+  </div>`;
+}
+
+function miniSilence() {
+  return `<div class="mini-silence">
+    <span class="mini-silence-icon">&#9989;</span>
+    <span class="mini-silence-text">Alles ruhig</span>
+  </div>`;
+}
+
+function miniClockFace(hourAngle, minuteAngle) {
+  return `<div class="mini-clock">
+    <div class="mini-clock-hand hour" style="transform:rotate(${hourAngle}deg)"></div>
+    <div class="mini-clock-hand minute" style="transform:rotate(${minuteAngle}deg)"></div>
+    <div class="mini-clock-center"></div>
+  </div>`;
+}
+
+function miniTimelineDots(count, activeIdx) {
+  let dots = '';
+  for (let i = 0; i < count; i++) {
+    dots += `<span class="mini-timeline-dot${i === activeIdx ? ' active' : ''}"></span>`;
+  }
+  return `<div class="mini-timeline">${dots}</div>`;
+}
+
+function miniWeekStrip(activeDay) {
+  const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  const heights = [24, 18, 20, 22, 16, 10, 8];
+  return `<div class="mini-week">
+    ${days.map((d, i) => `<div class="mini-week-day">
+      <div class="mini-week-bar${i === activeDay ? ' active' : ''}" style="height:${heights[i]}px"></div>
+      <span class="mini-week-label">${d}</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+function miniPageHighlight() {
+  return `<div class="mini-page">
+    <div class="mini-page-line" style="width:90%"></div>
+    <div class="mini-page-line" style="width:75%"></div>
+    <div class="mini-page-highlight" style="width:45%"></div>
+    <div class="mini-page-line" style="width:85%"></div>
+    <div class="mini-page-line" style="width:60%"></div>
+  </div>`;
+}
+
+function miniDiff() {
+  return `<div class="mini-diff">
+    <div class="mini-diff-line context">&nbsp; &lt;div class="status"&gt;</div>
+    <div class="mini-diff-line removed">- &nbsp; geschlossen</div>
+    <div class="mini-diff-line added">+ &nbsp; geoeffnet</div>
+    <div class="mini-diff-line context">&nbsp; &lt;/div&gt;</div>
+  </div>`;
+}
+
+function miniDomTree() {
+  return `<div class="mini-dom">
+    &lt;html&gt;<br>
+    &nbsp;&nbsp;&lt;body&gt;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&lt;div class="content"&gt;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mini-dom-highlight">&lt;span class="open"&gt;</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&lt;/div&gt;
+  </div>`;
+}
+
+function miniJsonPath() {
+  return miniJson(`<span class="key">"data"</span>: {<br>&nbsp;&nbsp;<span class="key">"status"</span>: <span class="str">"open"</span>,<br>&nbsp;&nbsp;<span class="key">"count"</span>: <span class="num">42</span><br>}`);
+}
+
+function miniRssNew() {
+  return `<div class="mini-feed">
+    <div class="mini-feed-item" style="background:rgba(6,182,212,0.08); border-left:2px solid var(--accent2);">
+      <div class="mini-feed-dot" style="background:var(--accent2)"></div>
+      <span style="font-size:6px; color:var(--accent2); font-weight:600;">NEU</span>
+      <div class="mini-feed-line" style="width:50%"></div>
+    </div>
+    <div class="mini-feed-item" style="background:rgba(6,182,212,0.08); border-left:2px solid var(--accent2);">
+      <div class="mini-feed-dot" style="background:var(--accent2)"></div>
+      <span style="font-size:6px; color:var(--accent2); font-weight:600;">NEU</span>
+      <div class="mini-feed-line" style="width:40%"></div>
+    </div>
+    <div class="mini-feed-item">
+      <div class="mini-feed-dot" style="background:var(--text-muted)"></div>
+      <div class="mini-feed-line" style="width:55%"></div>
+    </div>
+  </div>`;
+}
+
+function miniAiChat() {
+  return `<div class="mini-ai-chat">
+    <div class="mini-ai-q">Ist Anmeldung offen?</div>
+    <div class="mini-ai-a">Ja, 3 Plaetze frei.</div>
+  </div>`;
+}
+
+function miniRegex() {
+  return `<div class="mini-regex">
+    Preis: <span class="mini-regex-match">29,99 EUR</span><br>
+    Rabatt: <span class="mini-regex-match">14,50 EUR</span>
+  </div>`;
+}
+
+function miniWebhook() {
+  return `<div class="mini-webhook">
+    <div class="mini-webhook-box">POST</div>
+    <span class="mini-webhook-arrow">&#8594;</span>
+    <div class="mini-webhook-box" style="background:rgba(34,197,94,0.1); border-color:rgba(34,197,94,0.3); color:var(--success);">URL</div>
+  </div>`;
+}
+
+function miniGhIssue() {
+  return `<div class="mini-gh-issue">
+    <div class="mini-gh-issue-title">Alert: Aenderung erkannt</div>
+    <div class="mini-gh-labels">
+      <span class="mini-gh-label" style="background:rgba(239,68,68,0.2); color:#ef4444;">bug</span>
+      <span class="mini-gh-label" style="background:rgba(139,92,246,0.2); color:#8b5cf6;">auto</span>
+    </div>
+  </div>`;
+}
+
+function miniTerminal(cmd) {
+  return `<div class="mini-terminal">
+    <div class="mini-terminal-bar">
+      <span class="mini-terminal-dot" style="background:#ef4444"></span>
+      <span class="mini-terminal-dot" style="background:#f59e0b"></span>
+      <span class="mini-terminal-dot" style="background:#22c55e"></span>
+    </div>
+    <div class="mini-terminal-body"><span class="mini-terminal-prompt">$ </span>${cmd}</div>
+  </div>`;
+}
+
+function miniCloudUpload() {
+  return `<div class="mini-cloud">
+    <span class="mini-cloud-icon">&#9729;</span>
+    <span class="mini-cloud-arrow">&#8593;</span>
+    <span style="font-size:6px; color:var(--text-muted);">S3 Bucket</span>
+  </div>`;
+}
+
+function miniChainTrigger() {
+  return `<div class="mini-chain">
+    <div class="mini-hex">&#x2B21;</div>
+    <div class="mini-chain-link"></div>
+    <div class="mini-hex">&#x2B21;</div>
+  </div>`;
+}
+
+function miniDashboard(bg, accent, card) {
+  return `<div class="mini-dashboard" style="background:${bg}; border:1px solid ${accent}33;">
+    <div class="mini-dash-bar" style="background:${card};">
+      <span class="mini-dash-bar-dot" style="background:#ef4444;"></span>
+      <span class="mini-dash-bar-dot" style="background:#f59e0b;"></span>
+      <span class="mini-dash-bar-dot" style="background:#22c55e;"></span>
+    </div>
+    <div class="mini-dash-body">
+      <div class="mini-dash-card" style="background:${card};"></div>
+      <div class="mini-dash-card" style="background:${accent}33;"></div>
+      <div class="mini-dash-card" style="background:${card};"></div>
+      <div class="mini-dash-card" style="background:${accent}22;"></div>
+    </div>
+  </div>`;
+}
+
+function miniHeatmap() {
+  const colors = ['#1a1a2e','#16213e','#0f3460','#533483','#e94560','#f59e0b','#22c55e','#06b6d4'];
+  let cells = '';
+  for (let i = 0; i < 24; i++) {
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    cells += `<div class="mini-heatmap-cell" style="background:${c}; opacity:${0.4 + Math.random()*0.6}"></div>`;
+  }
+  return `<div class="mini-heatmap">${cells}</div>`;
+}
+
+function miniGenomTracks() {
+  return `<div class="mini-tracks">
+    <div class="mini-track-row">
+      <span class="mini-track-label">Gene</span>
+      <div class="mini-track-bar" style="width:20%; background:#8B5CF6; margin-left:10%"></div>
+      <div class="mini-track-bar" style="width:35%; background:#8B5CF6; margin-left:5%"></div>
+    </div>
+    <div class="mini-track-row">
+      <span class="mini-track-label">SV</span>
+      <div class="mini-track-bar" style="width:50%; background:#ef4444; margin-left:15%"></div>
+    </div>
+    <div class="mini-track-row">
+      <span class="mini-track-label">CNV</span>
+      <div class="mini-track-bar" style="width:15%; background:#06b6d4; margin-left:5%"></div>
+      <div class="mini-track-bar" style="width:25%; background:#06b6d4; margin-left:10%"></div>
+      <div class="mini-track-bar" style="width:10%; background:#06b6d4; margin-left:3%"></div>
+    </div>
+    <div class="mini-track-row">
+      <span class="mini-track-label">Cov</span>
+      <svg viewBox="0 0 100 6" style="flex:1; height:6px;">
+        <polyline points="0,5 8,3 16,4 24,2 32,3 40,1 48,2 56,4 64,3 72,2 80,4 88,3 96,5 100,4" fill="none" stroke="#22c55e" stroke-width="1"/>
+      </svg>
+    </div>
+  </div>`;
+}
+
+function miniRustCode() {
+  return `<div class="mini-rust">
+<span class="kw">pub fn</span> <span class="fn">process</span>(data: &amp;[u8]) {<br>
+&nbsp;&nbsp;<span class="kw">let</span> result = <span class="fn">transform</span>(data);<br>
+&nbsp;&nbsp;<span class="fn">emit</span>(<span class="str">"done"</span>, result);<br>
+}
+  </div>`;
+}
+
+function miniPubmed() {
+  return `<div class="mini-pubmed">
+    <div class="mini-pubmed-header"><span class="mini-pubmed-logo">PubMed</span></div>
+    <div class="mini-pubmed-item"><div class="mini-pubmed-title" style="width:85%"></div><div class="mini-pubmed-meta"></div></div>
+    <div class="mini-pubmed-item"><div class="mini-pubmed-title" style="width:70%"></div><div class="mini-pubmed-meta"></div></div>
+    <div class="mini-pubmed-item"><div class="mini-pubmed-title" style="width:75%"></div><div class="mini-pubmed-meta"></div></div>
+  </div>`;
+}
+
+function miniClinvar() {
+  return `<div class="mini-clinvar">
+    <div class="mini-clinvar-header"><span class="mini-clinvar-logo">ClinVar</span></div>
+    <div class="mini-clinvar-row"><span class="mini-clinvar-variant">BRCA1 c.68_69del</span><span class="mini-clinvar-badge pathogenic">P</span></div>
+    <div class="mini-clinvar-row"><span class="mini-clinvar-variant">TP53 c.743G&gt;A</span><span class="mini-clinvar-badge vus">VUS</span></div>
+    <div class="mini-clinvar-row"><span class="mini-clinvar-variant">MLH1 c.306+5G</span><span class="mini-clinvar-badge benign">B</span></div>
+  </div>`;
+}
+
+function miniGithubCard() {
+  return `<div class="mini-github">
+    <div class="mini-github-name">user/my-project</div>
+    <div class="mini-github-desc-line" style="width:80%"></div>
+    <div class="mini-github-stats">
+      <span class="mini-github-stat"><span class="mini-github-stat-dot" style="background:#f59e0b"></span> JS</span>
+      <span class="mini-github-stat">&#9733; 42</span>
+      <span class="mini-github-stat">&#9741; 8</span>
+    </div>
+  </div>`;
+}
+
+function miniAwsCloud() {
+  return `<div class="mini-aws">
+    <span class="mini-aws-logo">CloudWatch</span>
+    ${miniLineChart('#ff9900', '0,30 15,25 30,28 45,15 60,20 75,12 100,18')}
+  </div>`;
+}
+
+function miniInbox() {
+  return `<div class="mini-inbox">
+    <div class="mini-inbox-row unread"><div class="mini-inbox-from"></div><div class="mini-inbox-subj" style="width:70%"></div></div>
+    <div class="mini-inbox-row unread"><div class="mini-inbox-from"></div><div class="mini-inbox-subj" style="width:55%"></div></div>
+    <div class="mini-inbox-row"><div class="mini-inbox-from"></div><div class="mini-inbox-subj" style="width:65%"></div></div>
+    <div class="mini-inbox-row"><div class="mini-inbox-from"></div><div class="mini-inbox-subj" style="width:50%"></div></div>
+  </div>`;
+}
+
+function miniFeed() {
+  return `<div class="mini-feed">
+    <div class="mini-feed-item"><div class="mini-feed-dot"></div><div class="mini-feed-line" style="width:65%"></div></div>
+    <div class="mini-feed-item"><div class="mini-feed-dot"></div><div class="mini-feed-line" style="width:50%"></div></div>
+    <div class="mini-feed-item"><div class="mini-feed-dot"></div><div class="mini-feed-line" style="width:55%"></div></div>
+  </div>`;
+}
+
+// Starter template composites
+function miniStarterWatcher() {
+  return `<div class="mini-starter">
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:#0d1117;">${miniBrowser('vhs.de', '<div class="mini-browser-line" style="width:70%"></div>')}</div>
+    </div>
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:rgba(245,158,11,0.06);font-size:10px; color:var(--warning);">&#128269;</div>
+      <div class="mini-starter-block" style="background:rgba(0,136,204,0.1);">${miniTelegram()}</div>
+    </div>
+  </div>`;
+}
+
+function miniStarterTracker() {
+  return `<div class="mini-starter">
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:#0d1117;">${miniLineChart('#06b6d4')}</div>
+      <div class="mini-starter-block" style="background:rgba(239,68,68,0.06); font-size:14px;">&#128200;</div>
+    </div>
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:rgba(0,136,204,0.1);">${miniTelegram()}</div>
+    </div>
+  </div>`;
+}
+
+function miniStarterLearn() {
+  return `<div class="mini-starter">
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:rgba(37,99,235,0.1); font-size:7px; color:#60a5fa;">Mod 1</div>
+      <div class="mini-starter-block" style="background:rgba(37,99,235,0.1); font-size:7px; color:#60a5fa;">Mod 2</div>
+    </div>
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:rgba(37,99,235,0.1); font-size:7px; color:#60a5fa;">Mod 3</div>
+      <div class="mini-starter-block" style="background:rgba(37,99,235,0.1); font-size:7px; color:#60a5fa;">Mod 4</div>
+    </div>
+  </div>`;
+}
+
+function miniStarterMail() {
+  return `<div class="mini-starter">
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:#0d1117;">${miniInbox()}</div>
+    </div>
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:rgba(139,92,246,0.06); font-size:10px; color:var(--accent);">&#129302;</div>
+      <div class="mini-starter-block" style="background:rgba(0,136,204,0.1);">${miniTelegram()}</div>
+    </div>
+  </div>`;
+}
+
+function miniStarterPortal() {
+  return `<div class="mini-starter">
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:rgba(139,92,246,0.08); font-size:7px; color:var(--accent);">Proj A</div>
+      <div class="mini-starter-block" style="background:rgba(139,92,246,0.08); font-size:7px; color:var(--accent);">Proj B</div>
+    </div>
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:rgba(139,92,246,0.08); font-size:7px; color:var(--accent);">Proj C</div>
+      <div class="mini-starter-block" style="background:rgba(139,92,246,0.12); font-size:8px; color:var(--accent);">+</div>
+    </div>
+  </div>`;
+}
+
+function miniStarterAlert() {
+  return `<div class="mini-starter">
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:#0d1117;">${miniPubmed()}</div>
+    </div>
+    <div class="mini-starter-row">
+      <div class="mini-starter-block" style="background:rgba(139,92,246,0.06);">${miniEmailCard()}</div>
+    </div>
+  </div>`;
+}
 
 // ─── CATEGORIES & BLOCKS ─────────────────────────────────────
 
 const CATEGORIES = [
   {
-    id: 'showcase', name: 'Inspiration', icon: '\u2728', desc: 'Echte Projekte als Startpunkt',
+    id: 'showcase', name: 'Startvorlagen', icon: '\u2728',
     blocks: [
-      { id: 'start-helix', name: 'Lernplattform', desc: '10-Modul Genetik-Suite (wie helix)', appliesAll: true,
-        autoBlocks: ['src-api', 'cond-changed', 'sched-daily', 'notify-email', 'theme-clinical', 'feat-viz-basic'] },
-      { id: 'start-tracker', name: 'Daten-Tracker', desc: '4.4M Varianten tracken (wie vusTracker)', appliesAll: true,
-        autoBlocks: ['src-clinvar', 'cond-changed', 'sched-3h', 'notify-telegram', 'theme-dashboard', 'feat-data'] },
-      { id: 'start-alert', name: 'Alert-Bot', desc: 'Email-Recherche-Bot (wie literatureAlert)', appliesAll: true,
-        autoBlocks: ['src-pubmed', 'cond-rss', 'sched-daily', 'notify-email'] },
-      { id: 'start-mailbot', name: 'Email-Agent', desc: 'LLM-Email mit Telegram-Approval (wie maildesk)', appliesAll: true,
-        autoBlocks: ['src-imap', 'cond-llm', 'sched-5min', 'notify-telegram'] },
-      { id: 'start-portal', name: 'Portal / Showcase', desc: 'Animiertes Projekt-Hub (wie showcase)', appliesAll: true,
-        autoBlocks: ['src-github', 'sched-daily', 'theme-cinematic', 'act-publish'] },
       { id: 'start-watcher', name: 'Webseiten-Watcher', desc: 'URL ueberwachen + benachrichtigen', appliesAll: true,
-        autoBlocks: ['src-url', 'cond-contains', 'sched-hourly', 'notify-telegram'] },
+        autoBlocks: ['src-url', 'cond-contains', 'sched-hourly', 'notify-telegram'],
+        visual: miniStarterWatcher },
+      { id: 'start-tracker', name: 'Daten-Tracker', desc: '4.4M Varianten tracken', appliesAll: true,
+        autoBlocks: ['src-clinvar', 'cond-changed', 'sched-3h', 'notify-telegram', 'theme-dashboard', 'feat-data'],
+        visual: miniStarterTracker },
+      { id: 'start-helix', name: 'Lernplattform', desc: '10-Modul Genetik-Suite', appliesAll: true,
+        autoBlocks: ['src-api', 'cond-changed', 'sched-daily', 'notify-email', 'theme-clinical', 'feat-viz-basic'],
+        visual: miniStarterLearn },
+      { id: 'start-mailbot', name: 'Email-Agent', desc: 'LLM-Email mit Approval', appliesAll: true,
+        autoBlocks: ['src-imap', 'cond-llm', 'sched-5min', 'notify-telegram'],
+        visual: miniStarterMail },
+      { id: 'start-portal', name: 'Portal / Showcase', desc: 'Animiertes Projekt-Hub', appliesAll: true,
+        autoBlocks: ['src-github', 'sched-daily', 'theme-cinematic', 'act-publish'],
+        visual: miniStarterPortal },
+      { id: 'start-alert', name: 'Alert-Bot', desc: 'PubMed-Recherche-Bot', appliesAll: true,
+        autoBlocks: ['src-pubmed', 'cond-rss', 'sched-daily', 'notify-email'],
+        visual: miniStarterAlert },
     ]
   },
   {
-    id: 'sources', name: 'Datenquellen', icon: '\uD83D\uDCE1', desc: 'Woher kommen die Daten?',
+    id: 'sources', name: 'Datenquellen', icon: '\uD83D\uDCE1',
     blocks: [
       { id: 'src-url', name: 'URL / Webseite', desc: 'HTML-Seite abrufen', configKey: 'source',
-        fields: [{ name: 'url', label: 'URL', type: 'url', placeholder: 'https://vhs-hamburg.de/kurse' }] },
+        fields: [{ name: 'url', label: 'URL', type: 'url', placeholder: 'https://vhs-hamburg.de/kurse' }],
+        visual: () => miniBrowser('https://...', '<div class="mini-browser-line" style="width:80%"></div><div class="mini-browser-line" style="width:60%"></div><div class="mini-browser-line" style="width:70%"></div>') },
       { id: 'src-api', name: 'REST API', desc: 'JSON API abfragen', configKey: 'source',
-        fields: [{ name: 'url', label: 'API URL', type: 'url', placeholder: 'https://api.example.com/data' }, { name: 'method', label: 'Methode', type: 'select', options: ['GET', 'POST'] }] },
+        fields: [{ name: 'url', label: 'API URL', type: 'url', placeholder: 'https://api.example.com/data' }, { name: 'method', label: 'Methode', type: 'select', options: ['GET', 'POST'] }],
+        visual: () => miniJson(`{<br>&nbsp;&nbsp;<span class="key">"status"</span>: <span class="str">"ok"</span>,<br>&nbsp;&nbsp;<span class="key">"data"</span>: [<span class="num">...</span>]<br>}`) },
       { id: 'src-rss', name: 'RSS / Atom Feed', desc: 'Feed-Eintraege ueberwachen', configKey: 'source',
-        fields: [{ name: 'url', label: 'Feed URL', type: 'url', placeholder: 'https://example.com/feed.xml' }] },
+        fields: [{ name: 'url', label: 'Feed URL', type: 'url', placeholder: 'https://example.com/feed.xml' }],
+        visual: miniFeed },
       { id: 'src-imap', name: 'Email-Postfach', desc: 'IMAP Inbox lesen', configKey: 'maildesk',
-        fields: [{ name: 'host', label: 'IMAP Host', placeholder: 'imap.gmail.com' }, { name: 'user', label: 'Benutzer', placeholder: 'user@example.com' }] },
+        fields: [{ name: 'host', label: 'IMAP Host', placeholder: 'imap.gmail.com' }, { name: 'user', label: 'Benutzer', placeholder: 'user@example.com' }],
+        visual: miniInbox },
       { id: 'src-pubmed', name: 'PubMed', desc: 'Biomedizinische Literatur', configKey: 'literature', preset: true,
-        fields: [{ name: 'query', label: 'Suchbegriff', placeholder: 'structural variants AND segmental duplications' }] },
+        fields: [{ name: 'query', label: 'Suchbegriff', placeholder: 'structural variants AND segmental duplications' }],
+        visual: miniPubmed },
       { id: 'src-clinvar', name: 'ClinVar', desc: 'Varianten-Datenbank', configKey: 'clinvar', preset: true,
-        fields: [{ name: 'gene', label: 'Gen', placeholder: 'BRCA1' }] },
+        fields: [{ name: 'gene', label: 'Gen', placeholder: 'BRCA1' }],
+        visual: miniClinvar },
       { id: 'src-github', name: 'GitHub API', desc: 'Repos, Issues, PRs', configKey: 'source', preset: true,
-        fields: [{ name: 'repo', label: 'Repository', placeholder: 'user/repo' }] },
+        fields: [{ name: 'repo', label: 'Repository', placeholder: 'user/repo' }],
+        visual: miniGithubCard },
       { id: 'src-aws', name: 'AWS CloudWatch', desc: 'AWS Metriken + Logs', configKey: 'source', preset: true,
-        fields: [{ name: 'metric', label: 'Metrik', placeholder: 'CPUUtilization' }] },
-      { id: 'src-s3', name: 'S3 Bucket', desc: 'Dateien aus S3 lesen', configKey: 'source', preset: true,
-        fields: [{ name: 'bucket', label: 'Bucket', placeholder: 'my-data-bucket' }, { name: 'prefix', label: 'Prefix', placeholder: 'data/' }] },
+        fields: [{ name: 'metric', label: 'Metrik', placeholder: 'CPUUtilization' }],
+        visual: miniAwsCloud },
     ]
   },
   {
-    id: 'conditions', name: 'Bedingungen', icon: '\uD83D\uDD0D', desc: 'Wann soll etwas passieren?',
+    id: 'conditions', name: 'Bedingungen', icon: '\uD83D\uDD0D',
     blocks: [
       { id: 'cond-contains', name: 'Text-Suche', desc: '"freie Plaetze" taucht auf', configKey: 'condition',
-        fields: [{ name: 'value', label: 'Suchtext', placeholder: 'freie Plaetze' }] },
-      { id: 'cond-changed', name: 'Aenderung erkannt', desc: 'Irgendwas aendert sich', configKey: 'condition' },
+        fields: [{ name: 'value', label: 'Suchtext', placeholder: 'freie Plaetze' }],
+        visual: miniPageHighlight },
+      { id: 'cond-changed', name: 'Aenderung erkannt', desc: 'Irgendwas aendert sich', configKey: 'condition',
+        visual: miniDiff },
       { id: 'cond-css', name: 'HTML-Element', desc: 'CSS-Selector erscheint', configKey: 'condition',
-        fields: [{ name: 'selector', label: 'CSS Selector', placeholder: '.registration-open' }] },
+        fields: [{ name: 'selector', label: 'CSS Selector', placeholder: '.registration-open' }],
+        visual: miniDomTree },
       { id: 'cond-json', name: 'JSON-Wert', desc: 'API-Feld pruefen', configKey: 'condition',
-        fields: [{ name: 'path', label: 'JSON Path', placeholder: '$.data.status' }, { name: 'value', label: 'Erwarteter Wert', placeholder: 'open' }] },
+        fields: [{ name: 'path', label: 'JSON Path', placeholder: '$.data.status' }, { name: 'value', label: 'Erwarteter Wert', placeholder: 'open' }],
+        visual: miniJsonPath },
       { id: 'cond-threshold', name: 'Schwellwert', desc: 'Wert ueber/unter X', configKey: 'condition',
-        fields: [{ name: 'path', label: 'Pfad zum Wert' }, { name: 'operator', label: 'Operator', type: 'select', options: ['>', '<', '>=', '<=', '=='] }, { name: 'value', label: 'Grenzwert', type: 'number' }] },
-      { id: 'cond-rss', name: 'Neue Feed-Eintraege', desc: 'Neue Items im RSS', configKey: 'condition' },
-      { id: 'cond-llm', name: 'KI-Frage', desc: 'Natuerliche Sprache (~$0.001/Check)', configKey: 'condition',
-        fields: [{ name: 'question', label: 'Frage', type: 'textarea', placeholder: 'Ist die Anmeldung zum Schwimmkurs geoeffnet?' }] },
+        fields: [{ name: 'path', label: 'Pfad zum Wert' }, { name: 'operator', label: 'Operator', type: 'select', options: ['>', '<', '>=', '<=', '=='] }, { name: 'value', label: 'Grenzwert', type: 'number' }],
+        visual: () => miniThresholdChart('#ef4444') },
+      { id: 'cond-rss', name: 'Neue Feed-Eintraege', desc: 'Neue Items im RSS', configKey: 'condition',
+        visual: miniRssNew },
+      { id: 'cond-llm', name: 'KI-Frage', desc: 'Natuerliche Sprache (~$0.001)', configKey: 'condition',
+        fields: [{ name: 'question', label: 'Frage', type: 'textarea', placeholder: 'Ist die Anmeldung geoeffnet?' }],
+        visual: miniAiChat },
       { id: 'cond-regex', name: 'Regex', desc: 'Regulaerer Ausdruck', configKey: 'condition',
-        fields: [{ name: 'regex', label: 'Pattern', placeholder: 'Preis:\\s*\\d+,\\d+\\s*EUR' }] },
-      { id: 'cond-stale', name: 'Alter pruefen', desc: 'Daten aelter als X Stunden', configKey: 'condition',
-        fields: [{ name: 'max_age_hours', label: 'Max. Alter (Std.)', type: 'number', placeholder: '24' }] },
+        fields: [{ name: 'regex', label: 'Pattern', placeholder: 'Preis:\\s*\\d+,\\d+\\s*EUR' }],
+        visual: miniRegex },
     ]
   },
   {
-    id: 'schedule', name: 'Zeitplan', icon: '\u23F0', desc: 'Wie oft pruefen?',
+    id: 'schedule', name: 'Zeitplan', icon: '\u23F0',
     blocks: [
-      { id: 'sched-5min', name: 'Alle 5 Minuten', desc: '*/5 * * * *', cron: '*/5 * * * *' },
-      { id: 'sched-hourly', name: 'Stuendlich', desc: '0 * * * *', cron: '0 * * * *' },
-      { id: 'sched-3h', name: 'Alle 3 Stunden', desc: '0 */3 * * *', cron: '0 */3 * * *' },
-      { id: 'sched-daily', name: 'Taeglich (8 Uhr)', desc: '0 8 * * *', cron: '0 8 * * *' },
-      { id: 'sched-weekly', name: 'Woechentlich (Mo)', desc: '0 8 * * 1', cron: '0 8 * * 1' },
+      { id: 'sched-5min', name: 'Alle 5 Minuten', desc: '*/5 * * * *', cron: '*/5 * * * *',
+        visual: () => miniTimelineDots(20, 3) },
+      { id: 'sched-hourly', name: 'Stuendlich', desc: '0 * * * *', cron: '0 * * * *',
+        visual: () => miniClockFace(0, 0) },
+      { id: 'sched-3h', name: 'Alle 3 Stunden', desc: '0 */3 * * *', cron: '0 */3 * * *',
+        visual: () => miniClockFace(90, 0) },
+      { id: 'sched-daily', name: 'Taeglich 8 Uhr', desc: '0 8 * * *', cron: '0 8 * * *',
+        visual: () => miniClockFace(240, 0) },
+      { id: 'sched-weekly', name: 'Woechentlich (Mo)', desc: '0 8 * * 1', cron: '0 8 * * 1',
+        visual: () => miniWeekStrip(0) },
     ]
   },
   {
-    id: 'notify', name: 'Benachrichtigungen', icon: '\uD83D\uDD14', desc: 'Wohin melden?',
+    id: 'notify', name: 'Benachrichtigungen', icon: '\uD83D\uDD14',
     blocks: [
-      { id: 'notify-telegram', name: 'Telegram', desc: 'Bot-Nachricht', icon: '\uD83D\uDCAC',
-        fields: [{ name: 'bot_token', label: 'Bot Token', placeholder: '123456:ABC-DEF...' }, { name: 'chat_id', label: 'Chat ID', placeholder: '-100123456789' }] },
-      { id: 'notify-discord', name: 'Discord', desc: 'Webhook', icon: '\uD83C\uDFAE',
-        fields: [{ name: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://discord.com/api/webhooks/...' }] },
-      { id: 'notify-slack', name: 'Slack', desc: 'Webhook', icon: '\uD83D\uDCBC',
-        fields: [{ name: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://hooks.slack.com/services/...' }] },
-      { id: 'notify-email', name: 'Email', desc: 'SMTP', icon: '\uD83D\uDCE7',
-        fields: [{ name: 'to', label: 'Empfaenger', placeholder: 'user@example.com' }, { name: 'smtp_host', label: 'SMTP Host', placeholder: 'smtp.gmail.com' }] },
-      { id: 'notify-silence', name: 'Stille-Bestaetigung', desc: '"Tracker laeuft noch" Meldung', icon: '\u2705' },
+      { id: 'notify-telegram', name: 'Telegram', desc: 'Bot-Nachricht',
+        fields: [{ name: 'bot_token', label: 'Bot Token', placeholder: '123456:ABC-DEF...' }, { name: 'chat_id', label: 'Chat ID', placeholder: '-100123456789' }],
+        visual: miniTelegram },
+      { id: 'notify-discord', name: 'Discord', desc: 'Webhook',
+        fields: [{ name: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://discord.com/api/webhooks/...' }],
+        visual: miniDiscord },
+      { id: 'notify-slack', name: 'Slack', desc: 'Webhook',
+        fields: [{ name: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://hooks.slack.com/services/...' }],
+        visual: miniSlack },
+      { id: 'notify-email', name: 'Email', desc: 'SMTP',
+        fields: [{ name: 'to', label: 'Empfaenger', placeholder: 'user@example.com' }, { name: 'smtp_host', label: 'SMTP Host', placeholder: 'smtp.gmail.com' }],
+        visual: miniEmailCard },
+      { id: 'notify-silence', name: 'Stille-Bestaetigung', desc: '"Alles ruhig" Meldung',
+        visual: miniSilence },
     ]
   },
   {
-    id: 'actions', name: 'Aktionen', icon: '\u26A1', desc: 'Was soll passieren?',
+    id: 'actions', name: 'Aktionen', icon: '\u26A1',
     blocks: [
       { id: 'act-webhook', name: 'Webhook aufrufen', desc: 'HTTP POST an URL',
-        fields: [{ name: 'url', label: 'Webhook URL', type: 'url' }] },
+        fields: [{ name: 'url', label: 'Webhook URL', type: 'url' }],
+        visual: miniWebhook },
       { id: 'act-github-issue', name: 'GitHub Issue', desc: 'Issue erstellen',
-        fields: [{ name: 'repo', label: 'Repo', placeholder: 'user/repo' }] },
-      { id: 'act-github-pr', name: 'GitHub PR', desc: 'Pull Request erstellen',
-        fields: [{ name: 'repo', label: 'Repo', placeholder: 'user/repo' }] },
+        fields: [{ name: 'repo', label: 'Repo', placeholder: 'user/repo' }],
+        visual: miniGhIssue },
       { id: 'act-shell', name: 'Shell-Befehl', desc: 'Command ausfuehren',
-        fields: [{ name: 'command', label: 'Befehl', placeholder: 'echo "done"' }] },
+        fields: [{ name: 'command', label: 'Befehl', placeholder: 'echo "done"' }],
+        visual: () => miniTerminal('echo "done"') },
       { id: 'act-s3', name: 'Nach S3 pushen', desc: 'Daten in S3-Bucket',
-        fields: [{ name: 'bucket', label: 'Bucket' }, { name: 'path', label: 'Pfad' }] },
+        fields: [{ name: 'bucket', label: 'Bucket' }, { name: 'path', label: 'Pfad' }],
+        visual: miniCloudUpload },
       { id: 'act-trigger', name: 'Nano-Zyrkel triggern', desc: 'Anderes Projekt starten',
-        fields: [{ name: 'repo', label: 'Repo' }] },
-      { id: 'act-publish', name: 'API veroeffentlichen', desc: 'JSON auf GitHub Pages' },
+        fields: [{ name: 'repo', label: 'Repo' }],
+        visual: miniChainTrigger },
+      { id: 'act-publish', name: 'API veroeffentlichen', desc: 'JSON auf GitHub Pages',
+        visual: () => miniJson(`<span class="key">"api"</span>: <span class="str">"/data.json"</span><br><span class="key">"pages"</span>: <span class="str">true</span>`) },
     ]
   },
   {
-    id: 'gui', name: 'Oberflaeche', icon: '\uD83C\uDFA8', desc: 'Browser-Dashboard?',
+    id: 'gui', name: 'Oberflaeche', icon: '\uD83C\uDFA8',
     blocks: [
-      { id: 'theme-clinical', name: 'Clinical', desc: 'Medizinisch, blau/weiss', colors: { bg: '#ffffff', accent: '#2563eb', card: '#f8fafc' } },
-      { id: 'theme-dashboard', name: 'Dashboard', desc: 'Dunkel, Neon-Akzente', colors: { bg: '#0f172a', accent: '#22d3ee', card: '#1e293b' } },
-      { id: 'theme-magazine', name: 'Magazine', desc: 'Editorial, Serif', colors: { bg: '#fefce8', accent: '#b45309', card: '#fffbeb' } },
-      { id: 'theme-minimal', name: 'Minimal', desc: 'Schwarz/Weiss, Helvetica', colors: { bg: '#ffffff', accent: '#000000', card: '#f5f5f5' } },
-      { id: 'theme-cinematic', name: 'Cinematic', desc: 'Dunkel, Gradient', colors: { bg: '#0a0a0a', accent: '#8b5cf6', card: '#171717' } },
+      { id: 'theme-clinical', name: 'Clinical', desc: 'Medizinisch, blau/weiss',
+        colors: { bg: '#ffffff', accent: '#2563eb', card: '#f8fafc' },
+        visual: () => miniDashboard('#ffffff', '#2563eb', '#f0f4ff') },
+      { id: 'theme-dashboard', name: 'Dashboard', desc: 'Dunkel, Neon-Akzente',
+        colors: { bg: '#0f172a', accent: '#22d3ee', card: '#1e293b' },
+        visual: () => miniDashboard('#0f172a', '#22d3ee', '#1e293b') },
+      { id: 'theme-magazine', name: 'Magazine', desc: 'Editorial, warm',
+        colors: { bg: '#fefce8', accent: '#b45309', card: '#fffbeb' },
+        visual: () => miniDashboard('#fefce8', '#b45309', '#fff7d6') },
+      { id: 'theme-minimal', name: 'Minimal', desc: 'Schwarz/Weiss',
+        colors: { bg: '#ffffff', accent: '#000000', card: '#f5f5f5' },
+        visual: () => miniDashboard('#ffffff', '#000000', '#f0f0f0') },
+      { id: 'theme-cinematic', name: 'Cinematic', desc: 'Dunkel, Gradient',
+        colors: { bg: '#0a0a0a', accent: '#8b5cf6', card: '#171717' },
+        visual: () => miniDashboard('#0a0a0a', '#8b5cf6', '#1a1a1a') },
     ]
   },
   {
-    id: 'compute', name: 'Berechnung', icon: '\u2699\uFE0F', desc: 'Daten verarbeiten',
+    id: 'compute', name: 'Berechnung', icon: '\u2699\uFE0F',
     blocks: [
-      { id: 'feat-data', name: 'DataLoader + Filter', desc: 'Laden, Filtern, Aggregieren', wasmFeature: 'data' },
-      { id: 'feat-viz-basic', name: 'Charts (Line, Bar, Donut)', desc: 'Basis-Visualisierungen', wasmFeature: 'viz-basic' },
-      { id: 'feat-viz-advanced', name: 'Charts (Heatmap, Scatter)', desc: 'Erweiterte Visualisierungen', wasmFeature: 'viz-advanced' },
-      { id: 'feat-viz-spatial', name: 'Genom-Tracks + Karten', desc: 'LinearTrack, NetworkGraph, WorldMap', wasmFeature: 'viz-spatial' },
-      { id: 'feat-plugin', name: 'Custom Rust Plugin', desc: 'Eigene Logik in Rust \u2192 WASM' },
+      { id: 'feat-data', name: 'DataLoader + Filter', desc: 'Laden, Filtern, Aggregieren', wasmFeature: 'data',
+        visual: () => miniJson(`<span class="key">"filter"</span>: <span class="str">"gene=TP53"</span><br><span class="key">"rows"</span>: <span class="num">4,412,108</span>`) },
+      { id: 'feat-viz-basic', name: 'Charts (Line, Bar)', desc: 'Basis-Visualisierungen', wasmFeature: 'viz-basic',
+        visual: () => miniLineChart('#8B5CF6') },
+      { id: 'feat-viz-advanced', name: 'Charts (Heatmap)', desc: 'Heatmap, Scatter, Violin', wasmFeature: 'viz-advanced',
+        visual: miniHeatmap },
+      { id: 'feat-viz-spatial', name: 'Genom-Tracks', desc: 'LinearTrack, Network', wasmFeature: 'viz-spatial',
+        visual: miniGenomTracks },
+      { id: 'feat-plugin', name: 'Custom Plugin', desc: 'Eigene Rust-Logik',
+        visual: miniRustCode },
     ]
   }
 ];
@@ -140,7 +612,6 @@ CATEGORIES.forEach(cat => cat.blocks.forEach(b => { b.category = cat.id; BLOCK_M
 const state = {
   blocks: [],
   blockConfig: {},
-  dragging: null,
   codeVisible: false,
   activeTab: 'config',
   zyrkelPort: null,
@@ -170,7 +641,7 @@ const $chatMessages = document.getElementById('chat-messages');
 const $chatInput = document.getElementById('chat-input');
 const $chatSend = document.getElementById('chat-send');
 
-// ─── HELPER: Category badge class ───────────────────────────
+// ─── HELPERS ────────────────────────────────────────────────
 
 function badgeClass(blockId) {
   if (blockId.startsWith('start-')) return 'showcase';
@@ -186,72 +657,62 @@ function badgeClass(blockId) {
 
 function badgeLabel(blockId) {
   const map = {
-    showcase: 'Inspiration', source: 'Datenquelle', condition: 'Bedingung',
+    showcase: 'Vorlage', source: 'Datenquelle', condition: 'Bedingung',
     schedule: 'Zeitplan', notify: 'Benachrichtigung', action: 'Aktion',
     theme: 'Oberflaeche', compute: 'Berechnung'
   };
   return map[badgeClass(blockId)] || '';
 }
 
-function categoryIcon(blockId) {
-  const block = BLOCK_MAP[blockId];
-  if (!block) return '';
-  const cat = CATEGORIES.find(c => c.id === block.category);
-  return cat ? cat.icon : '';
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// ─── RENDER BAUKASTEN ────────────────────────────────────────
+// ─── RENDER CATALOG (LEFT) ──────────────────────────────────
 
-function renderBaukasten() {
+function renderCatalog() {
   $categories.innerHTML = '';
   CATEGORIES.forEach(cat => {
     const catEl = document.createElement('div');
     catEl.className = 'category';
+
+    const visibleBlocks = cat.blocks.filter(b => !state.blocks.includes(b.id) || true);
     catEl.innerHTML = `
-      <div class="category-header">
-        <span class="category-icon">${cat.icon}</span>
+      <div class="category-header" data-cat-id="${cat.id}">
+        <span class="category-chevron">&#9660;</span>
         <span class="category-name">${cat.name}</span>
-        <span class="category-desc">${cat.desc}</span>
+        <span class="category-count">${cat.blocks.length}</span>
       </div>
-      <div class="category-blocks" id="cat-${cat.id}"></div>
+      <div class="category-grid" id="grid-${cat.id}"></div>
     `;
     $categories.appendChild(catEl);
 
-    const blocksContainer = catEl.querySelector('.category-blocks');
+    const header = catEl.querySelector('.category-header');
+    header.addEventListener('click', () => {
+      catEl.classList.toggle('collapsed');
+    });
+
+    const grid = catEl.querySelector('.category-grid');
     cat.blocks.forEach(block => {
       const inUse = state.blocks.includes(block.id);
       const card = document.createElement('div');
-      card.className = 'block-card' + (inUse ? ' in-use' : '');
-      card.draggable = true;
+      card.className = 'vcard' + (inUse ? ' in-use' : '');
       card.dataset.blockId = block.id;
+
+      const visualHtml = block.visual ? block.visual() : '';
       card.innerHTML = `
-        <span class="block-card-icon">${block.icon || cat.icon}</span>
-        <div class="block-card-text">
-          <div class="block-card-name">${block.name}</div>
-          <div class="block-card-desc">${block.desc}</div>
+        <div class="vcard-visual">${visualHtml}</div>
+        <div class="vcard-label">
+          <div class="vcard-name">${block.name}</div>
+          <div class="vcard-desc">${block.desc}</div>
         </div>
-        <button class="block-card-add" title="Hinzufuegen">+</button>
       `;
 
-      card.addEventListener('dragstart', (e) => {
-        state.dragging = block.id;
-        e.dataTransfer.effectAllowed = 'copy';
-        e.dataTransfer.setData('text/plain', block.id);
-        card.style.opacity = '0.5';
-      });
-      card.addEventListener('dragend', () => {
-        state.dragging = null;
-        card.style.opacity = '';
+      card.addEventListener('click', () => {
+        if (!inUse) addBlock(block.id);
       });
 
-      // Click to add
-      card.addEventListener('click', (e) => {
-        if (e.target.closest('.block-card-add') || e.target === card || card.contains(e.target)) {
-          if (!inUse) addBlock(block.id);
-        }
-      });
-
-      blocksContainer.appendChild(card);
+      grid.appendChild(card);
     });
   });
 }
@@ -260,46 +721,17 @@ function renderBaukasten() {
 
 $searchInput.addEventListener('input', () => {
   const q = $searchInput.value.toLowerCase().trim();
-  document.querySelectorAll('.block-card').forEach(card => {
+  document.querySelectorAll('.vcard').forEach(card => {
     const block = BLOCK_MAP[card.dataset.blockId];
     if (!block) return;
-    const text = (block.name + ' ' + block.desc).toLowerCase();
+    const text = (block.name + ' ' + block.desc + ' ' + block.category).toLowerCase();
     card.classList.toggle('filter-hidden', q.length > 0 && !text.includes(q));
   });
-  // Hide empty categories
   document.querySelectorAll('.category').forEach(cat => {
-    const visible = cat.querySelectorAll('.block-card:not(.filter-hidden)');
+    const visible = cat.querySelectorAll('.vcard:not(.filter-hidden)');
     cat.style.display = visible.length === 0 && q.length > 0 ? 'none' : '';
   });
 });
-
-// ─── DRAG & DROP ON VORSCHAU ─────────────────────────────────
-
-function handleDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'copy';
-  $vorschau.classList.add('drag-over');
-}
-
-function handleDragLeave(e) {
-  if (!$vorschau.contains(e.relatedTarget)) {
-    $vorschau.classList.remove('drag-over');
-  }
-}
-
-function handleDrop(e) {
-  e.preventDefault();
-  $vorschau.classList.remove('drag-over');
-  const blockId = e.dataTransfer.getData('text/plain') || state.dragging;
-  if (blockId && !state.blocks.includes(blockId)) {
-    addBlock(blockId);
-  }
-}
-
-// Expose to inline handlers
-window.handleDragOver = handleDragOver;
-window.handleDragLeave = handleDragLeave;
-window.handleDrop = handleDrop;
 
 // ─── ADD / REMOVE BLOCK ──────────────────────────────────────
 
@@ -308,7 +740,6 @@ function addBlock(blockId) {
   const block = BLOCK_MAP[blockId];
   if (!block) return;
 
-  // Showcase blocks auto-add their sub-blocks
   if (block.appliesAll && block.autoBlocks) {
     state.blocks.push(blockId);
     state.blockConfig[blockId] = {};
@@ -331,18 +762,18 @@ function removeBlock(blockId) {
   delete state.blockConfig[blockId];
   renderAll();
 }
+window.removeBlock = removeBlock;
 
 function updateFieldValue(blockId, fieldName, value) {
   if (!state.blockConfig[blockId]) state.blockConfig[blockId] = {};
   state.blockConfig[blockId][fieldName] = value;
-  // Re-render notification previews only (avoid full re-render to keep focus)
   updateNotificationPreviews();
   if (state.codeVisible) renderCodeDrawer();
 }
 
-// ─── RENDER VORSCHAU ─────────────────────────────────────────
+// ─── RENDER PREVIEW (RIGHT) ─────────────────────────────────
 
-function renderVorschau() {
+function renderPreview() {
   const hasBlocks = state.blocks.length > 0;
   $vorschauEmpty.style.display = hasBlocks ? 'none' : 'flex';
   $vorschauContent.style.display = hasBlocks ? 'block' : 'none';
@@ -353,7 +784,16 @@ function renderVorschau() {
   }
 
   $vorschauContent.innerHTML = '';
-  state.blocks.forEach(blockId => {
+
+  // Group by type and render in order
+  const order = ['start-', 'src-', 'cond-', 'sched-', 'notify-', 'theme-', 'feat-', 'act-'];
+  const sorted = [...state.blocks].sort((a, b) => {
+    const ai = order.findIndex(p => a.startsWith(p));
+    const bi = order.findIndex(p => b.startsWith(p));
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  sorted.forEach(blockId => {
     const block = BLOCK_MAP[blockId];
     if (!block) return;
     const el = createPreviewBlock(blockId, block);
@@ -370,35 +810,24 @@ function createPreviewBlock(blockId, block) {
   const label = badgeLabel(blockId);
 
   let bodyHtml = '';
-
-  if (blockId.startsWith('start-')) {
-    bodyHtml = renderShowcaseBody(blockId, block);
-  } else if (blockId.startsWith('src-')) {
-    bodyHtml = renderSourceBody(blockId, block);
-  } else if (blockId.startsWith('cond-')) {
-    bodyHtml = renderConditionBody(blockId, block);
-  } else if (blockId.startsWith('sched-')) {
-    bodyHtml = renderScheduleBody(blockId, block);
-  } else if (blockId.startsWith('notify-')) {
-    bodyHtml = renderNotifyBody(blockId, block);
-  } else if (blockId.startsWith('act-')) {
-    bodyHtml = renderActionBody(blockId, block);
-  } else if (blockId.startsWith('theme-')) {
-    bodyHtml = renderThemeBody(blockId, block);
-  } else if (blockId.startsWith('feat-')) {
-    bodyHtml = renderComputeBody(blockId, block);
-  }
+  if (blockId.startsWith('start-')) bodyHtml = renderShowcaseBody(blockId, block);
+  else if (blockId.startsWith('src-')) bodyHtml = renderSourceBody(blockId, block);
+  else if (blockId.startsWith('cond-')) bodyHtml = renderConditionBody(blockId, block);
+  else if (blockId.startsWith('sched-')) bodyHtml = renderScheduleBody(blockId, block);
+  else if (blockId.startsWith('notify-')) bodyHtml = renderNotifyBody(blockId, block);
+  else if (blockId.startsWith('act-')) bodyHtml = renderActionBody(blockId, block);
+  else if (blockId.startsWith('theme-')) bodyHtml = renderThemeBody(blockId, block);
+  else if (blockId.startsWith('feat-')) bodyHtml = renderComputeBody(blockId, block);
 
   div.innerHTML = `
     <button class="remove-btn" onclick="removeBlock('${blockId}')" title="Entfernen">&times;</button>
     <div class="preview-block-header">
       <span class="preview-block-badge ${badge}">${label}</span>
-      <span class="preview-block-title">${categoryIcon(blockId)} ${block.name}</span>
+      <span class="preview-block-title">${block.name}</span>
     </div>
     <div class="preview-block-body">${bodyHtml}</div>
   `;
 
-  // Bind field inputs after inserting
   setTimeout(() => {
     div.querySelectorAll('.field-input').forEach(input => {
       input.addEventListener('input', (e) => {
@@ -418,12 +847,12 @@ function renderShowcaseBody(blockId, block) {
     return b ? b.name : id;
   });
   return `
-    <div class="showcase-info">${block.desc}</div>
+    <div style="color:var(--text-muted); font-size:12px; margin-bottom:8px;">${block.desc}</div>
     <div class="showcase-includes">
       ${autoNames.map(n => `<span class="showcase-chip">${n}</span>`).join('')}
     </div>
-    <div class="showcase-info" style="margin-top:8px; opacity:0.7;">
-      Alle enthaltenen Bausteine wurden automatisch hinzugefuegt. Du kannst sie einzeln anpassen oder entfernen.
+    <div style="margin-top:8px; font-size:11px; color:var(--text-muted); opacity:0.7;">
+      Alle enthaltenen Bausteine wurden automatisch hinzugefuegt und koennen einzeln angepasst werden.
     </div>
   `;
 }
@@ -443,7 +872,7 @@ function renderConditionBody(blockId, block) {
     const val = config.value || 'freie Plaetze';
     const srcUrl = getSourceUrl();
     preview = `<div style="margin-top:10px; padding:8px 12px; background:rgba(34,197,94,0.08); border-radius:8px; font-size:12px; color:var(--success);">
-      \u2705 Gefunden: "${val}" auf ${srcUrl || '[URL]'}
+      &#9989; Gefunden: "${escHtml(val)}" auf ${escHtml(srcUrl) || '[URL]'}
     </div>`;
   } else if (blockId === 'cond-llm') {
     const q = config.question || 'Ist die Anmeldung geoeffnet?';
@@ -565,10 +994,6 @@ function renderFields(blockId, block) {
   </div>`;
 }
 
-function escHtml(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 // ─── NOTIFICATION PREVIEW ────────────────────────────────────
 
 function getSourceUrl() {
@@ -585,13 +1010,13 @@ function getConditionText() {
   for (const id of state.blocks) {
     if (id.startsWith('cond-')) {
       const cfg = state.blockConfig[id] || {};
-      const block = BLOCK_MAP[id];
       if (id === 'cond-contains') return cfg.value || 'freie Plaetze';
       if (id === 'cond-llm') return cfg.question || 'KI-Bedingung erfuellt';
       if (id === 'cond-css') return 'Element ' + (cfg.selector || '.selector') + ' gefunden';
       if (id === 'cond-json') return (cfg.path || '$.status') + ' == ' + (cfg.value || 'true');
       if (id === 'cond-regex') return 'Regex: ' + (cfg.regex || '.*');
       if (id === 'cond-threshold') return (cfg.path || 'Wert') + ' ' + (cfg.operator || '>') + ' ' + (cfg.value || '0');
+      const block = BLOCK_MAP[id];
       return block ? block.desc : 'Bedingung erfuellt';
     }
   }
@@ -648,7 +1073,7 @@ function renderNotificationPreview(notifyId) {
     return `
       <div class="notify-preview silence">
         <div class="notify-preview-label">Stille-Bestaetigung</div>
-        <div class="notify-preview-msg">\u2705 Alles ruhig. Letzte Pruefung: ${timeStr}.\nDein Tracker laeuft seit 3 Tagen. Naechste Pruefung: ${schedLabel}.</div>
+        <div class="notify-preview-msg">&#9989; Alles ruhig. Letzte Pruefung: ${timeStr}.\nDein Tracker laeuft seit 3 Tagen. Naechste Pruefung: ${schedLabel}.</div>
       </div>`;
   }
   return '';
@@ -657,23 +1082,19 @@ function renderNotificationPreview(notifyId) {
 function updateNotificationPreviews() {
   document.querySelectorAll('.notify-preview-container').forEach(container => {
     const notifyId = container.dataset.notifyId;
-    if (notifyId) {
-      container.innerHTML = renderNotificationPreview(notifyId);
-    }
+    if (notifyId) container.innerHTML = renderNotificationPreview(notifyId);
   });
 }
 
 // ─── SCHEDULE HELPERS ────────────────────────────────────────
 
 function getNextCronTimes(cron, count) {
-  // Simple cron approximation for display
   const parts = cron.split(' ');
   const now = new Date();
   const results = [];
 
   for (let i = 0; i < count; i++) {
     const next = new Date(now.getTime() + (i + 1) * estimateCronIntervalMs(parts));
-    // Snap to the hour/minute specified
     if (parts[1] !== '*' && !parts[1].startsWith('*/')) {
       next.setHours(parseInt(parts[1]) || 8);
     }
@@ -716,19 +1137,15 @@ function generateConfig() {
     if (!block) return;
 
     if (id.startsWith('src-')) {
-      const src = { type: id.replace('src-', ''), ...cfg };
-      sources.push(src);
+      sources.push({ type: id.replace('src-', ''), ...cfg });
     } else if (id.startsWith('cond-')) {
-      const cond = { type: id.replace('cond-', ''), ...cfg };
-      conditions.push(cond);
+      conditions.push({ type: id.replace('cond-', ''), ...cfg });
     } else if (id.startsWith('sched-')) {
       schedCron.push(block.cron);
     } else if (id.startsWith('notify-')) {
-      const n = { type: id.replace('notify-', ''), ...cfg };
-      notifications.push(n);
+      notifications.push({ type: id.replace('notify-', ''), ...cfg });
     } else if (id.startsWith('act-')) {
-      const a = { type: id.replace('act-', ''), ...cfg };
-      actions.push(a);
+      actions.push({ type: id.replace('act-', ''), ...cfg });
     } else if (id.startsWith('theme-')) {
       theme = { id: id.replace('theme-', ''), colors: block.colors };
     } else if (id.startsWith('feat-')) {
@@ -829,11 +1246,7 @@ nano-zyrkel run --config hats/config.json
 }
 
 function generateAllFiles() {
-  return {
-    config: generateConfig(),
-    workflow: generateWorkflow(),
-    readme: generateReadme(),
-  };
+  return { config: generateConfig(), workflow: generateWorkflow(), readme: generateReadme() };
 }
 
 // ─── CODE DRAWER ─────────────────────────────────────────────
@@ -846,25 +1259,17 @@ function toggleCodeDrawer() {
 
 function renderCodeDrawer() {
   const files = generateAllFiles();
-  const tabContent = {
-    config: files.config,
-    workflow: files.workflow,
-    readme: files.readme,
-  };
+  const tabContent = { config: files.config, workflow: files.workflow, readme: files.readme };
   $drawerCode.textContent = tabContent[state.activeTab] || '';
 
-  // Next steps
   const steps = [];
   steps.push('Erstelle ein neues GitHub Repository');
   steps.push('Kopiere config.json nach <code>hats/config.json</code>');
   steps.push('Kopiere run.yml nach <code>.github/workflows/run.yml</code>');
-
-  const hasNotify = state.blocks.some(id => id.startsWith('notify-'));
-  if (hasNotify) {
+  if (state.blocks.some(id => id.startsWith('notify-'))) {
     steps.push('Setze Secrets in GitHub Actions (z.B. TELEGRAM_BOT_TOKEN)');
   }
   steps.push('Aktiviere GitHub Actions — fertig!');
-
   $nextSteps.innerHTML = steps.map(s => `<li>${s}</li>`).join('');
 }
 
@@ -874,7 +1279,6 @@ $btnCloseDrawer.addEventListener('click', () => {
   $codeDrawer.classList.remove('visible');
 });
 
-// Tab switching
 document.querySelectorAll('.drawer-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
@@ -884,14 +1288,12 @@ document.querySelectorAll('.drawer-tab').forEach(tab => {
   });
 });
 
-// Copy
 $btnCopy.addEventListener('click', () => {
   const text = $drawerCode.textContent;
   navigator.clipboard.writeText(text).then(() => {
     $btnCopy.textContent = 'Kopiert!';
     setTimeout(() => { $btnCopy.textContent = 'Kopieren'; }, 1500);
   }).catch(() => {
-    // Fallback
     const ta = document.createElement('textarea');
     ta.value = text;
     document.body.appendChild(ta);
@@ -906,8 +1308,8 @@ $btnCopy.addEventListener('click', () => {
 // ─── RENDER ALL ──────────────────────────────────────────────
 
 function renderAll() {
-  renderBaukasten();
-  renderVorschau();
+  renderCatalog();
+  renderPreview();
   if (state.codeVisible) renderCodeDrawer();
 }
 
@@ -928,7 +1330,7 @@ async function detectZyrkel() {
         $btnDeploy.classList.remove('hidden');
         return;
       }
-    } catch (_) { /* next port */ }
+    } catch (_) { /* next */ }
   }
   state.zyrkelPort = null;
   $statusDot.classList.remove('online');
@@ -936,7 +1338,6 @@ async function detectZyrkel() {
   $btnDeploy.classList.add('hidden');
 }
 
-// Deploy button
 $btnDeploy.addEventListener('click', async () => {
   if (!state.zyrkelPort) return;
   const config = generateConfig();
@@ -949,15 +1350,13 @@ $btnDeploy.addEventListener('click', async () => {
     });
     if (resp.ok) {
       $btnDeploy.textContent = 'Deployed!';
-      setTimeout(() => { $btnDeploy.textContent = 'Jetzt deployen'; }, 2000);
     } else {
       $btnDeploy.textContent = 'Fehler';
-      setTimeout(() => { $btnDeploy.textContent = 'Jetzt deployen'; }, 2000);
     }
   } catch (e) {
     $btnDeploy.textContent = 'Fehler';
-    setTimeout(() => { $btnDeploy.textContent = 'Jetzt deployen'; }, 2000);
   }
+  setTimeout(() => { $btnDeploy.textContent = 'Jetzt deployen'; }, 2000);
 });
 
 // ─── LLM CHAT ────────────────────────────────────────────────
@@ -982,7 +1381,6 @@ function addChatMessage(role, text) {
 }
 
 function parseLLMBlockCommands(text) {
-  // Pattern: <!-- ADD:blockId --> or <!-- REMOVE:blockId -->
   const addPattern = /<!--\s*ADD:(\S+)\s*-->/g;
   const removePattern = /<!--\s*REMOVE:(\S+)\s*-->/g;
   let match;
@@ -1003,7 +1401,6 @@ function parseLLMBlockCommands(text) {
     }
   }
 
-  // Also handle field setting: <!-- FIELD:blockId:fieldName=value -->
   const fieldPattern = /<!--\s*FIELD:(\S+?):(\S+?)=(.+?)\s*-->/g;
   while ((match = fieldPattern.exec(text)) !== null) {
     const [, blockId, fieldName, value] = match;
@@ -1022,7 +1419,6 @@ async function sendChatMessage() {
   $chatInput.value = '';
   addChatMessage('user', text);
 
-  // Try to use local Zyrkel for LLM
   if (state.zyrkelPort) {
     try {
       const systemPrompt = `Du bist ein Assistent im nano-zyrkel Project Studio. Der Nutzer beschreibt was er bauen will, und du fuegst Bausteine hinzu.
@@ -1048,16 +1444,14 @@ Antworte kurz und auf Deutsch.`;
       if (resp.ok) {
         const data = await resp.json();
         const reply = data.reply || data.content || data.message || 'Keine Antwort.';
-        // Strip command tags for display
         const display = reply.replace(/<!--.*?-->/g, '').trim();
         addChatMessage('assistant', display || 'Bausteine aktualisiert.');
         parseLLMBlockCommands(reply);
         return;
       }
-    } catch (_) { /* fallback below */ }
+    } catch (_) { /* fallback */ }
   }
 
-  // Offline fallback: keyword matching
   const reply = offlineChatFallback(text);
   addChatMessage('assistant', reply.display);
   if (reply.commands) parseLLMBlockCommands(reply.commands);
@@ -1070,36 +1464,33 @@ function offlineChatFallback(text) {
 
   if (t.includes('watcher') || t.includes('webseite') || t.includes('ueberwach')) {
     commands.push('<!-- ADD:src-url -->', '<!-- ADD:cond-contains -->', '<!-- ADD:sched-hourly -->', '<!-- ADD:notify-telegram -->');
-    display = 'Ich habe einen Webseiten-Watcher eingerichtet: URL-Quelle, Text-Suche, stuendlicher Check und Telegram-Benachrichtigung.';
+    display = 'Webseiten-Watcher eingerichtet: URL-Quelle, Text-Suche, stuendlicher Check, Telegram-Benachrichtigung.';
   } else if (t.includes('email') || t.includes('mail')) {
     commands.push('<!-- ADD:src-imap -->', '<!-- ADD:cond-llm -->', '<!-- ADD:sched-5min -->', '<!-- ADD:notify-telegram -->');
-    display = 'Email-Agent eingerichtet: IMAP-Postfach, KI-Analyse, alle 5 Minuten, Telegram-Benachrichtigung.';
+    display = 'Email-Agent eingerichtet: IMAP-Postfach, KI-Analyse, alle 5 Minuten, Telegram.';
   } else if (t.includes('pubmed') || t.includes('literatur') || t.includes('paper')) {
     commands.push('<!-- ADD:src-pubmed -->', '<!-- ADD:cond-rss -->', '<!-- ADD:sched-daily -->', '<!-- ADD:notify-email -->');
-    display = 'Literatur-Alert eingerichtet: PubMed-Suche, neue Eintraege erkennen, taeglich, Email-Benachrichtigung.';
+    display = 'Literatur-Alert eingerichtet: PubMed-Suche, neue Eintraege, taeglich, Email.';
   } else if (t.includes('github') || t.includes('repo')) {
     commands.push('<!-- ADD:src-github -->', '<!-- ADD:cond-changed -->', '<!-- ADD:sched-3h -->', '<!-- ADD:notify-discord -->');
-    display = 'GitHub-Tracker eingerichtet: Repo ueberwachen, Aenderungen erkennen, alle 3 Stunden, Discord-Benachrichtigung.';
+    display = 'GitHub-Tracker eingerichtet: Repo ueberwachen, Aenderungen erkennen, alle 3h, Discord.';
   } else if (t.includes('dashboard') || t.includes('chart') || t.includes('visualis')) {
     commands.push('<!-- ADD:src-api -->', '<!-- ADD:feat-data -->', '<!-- ADD:feat-viz-basic -->', '<!-- ADD:theme-dashboard -->');
-    display = 'Dashboard eingerichtet: API-Datenquelle, DataLoader, Basis-Charts, Dashboard-Theme.';
+    display = 'Dashboard eingerichtet: API-Quelle, DataLoader, Charts, Dashboard-Theme.';
   } else if (t.includes('tracker') || t.includes('clinvar') || t.includes('variant')) {
     commands.push('<!-- ADD:start-tracker -->');
-    display = 'Daten-Tracker (wie vusTracker) mit allen Bausteinen eingerichtet.';
+    display = 'Daten-Tracker mit allen Bausteinen eingerichtet.';
   } else if (t.includes('telegram')) {
     commands.push('<!-- ADD:notify-telegram -->');
     display = 'Telegram-Benachrichtigung hinzugefuegt.';
   } else if (t.includes('discord')) {
     commands.push('<!-- ADD:notify-discord -->');
     display = 'Discord-Benachrichtigung hinzugefuegt.';
-  } else if (t.includes('entfern') || t.includes('loesch') || t.includes('alles weg') || t.includes('reset')) {
+  } else if (t.includes('entfern') || t.includes('loesch') || t.includes('reset')) {
     const removeAll = state.blocks.map(id => `<!-- REMOVE:${id} -->`);
     return { display: 'Alle Bausteine entfernt.', commands: removeAll.join('\n') };
   } else {
     display = 'Beschreibe genauer, was du bauen willst. Z.B.: "Webseite ueberwachen", "Email-Bot", "PubMed-Alert", "Dashboard mit Charts".';
-    if (!state.zyrkelPort) {
-      display += ' (Tipp: Starte Zyrkel fuer volle KI-Unterstuetzung.)';
-    }
   }
 
   return { display, commands: commands.join('\n') };
@@ -1107,20 +1498,11 @@ function offlineChatFallback(text) {
 
 $chatSend.addEventListener('click', sendChatMessage);
 $chatInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendChatMessage();
-  }
+  if (e.key === 'Enter') sendChatMessage();
 });
 
 // ─── INIT ────────────────────────────────────────────────────
 
 renderAll();
 detectZyrkel();
-// Re-detect every 30s
-setInterval(detectZyrkel, 30000);
-
-// Welcome chat message
-setTimeout(() => {
-  addChatMessage('assistant', 'Willkommen! Beschreibe was du bauen willst, oder ziehe Bausteine aus dem Baukasten in die Vorschau.');
-}, 500);
+setInterval(detectZyrkel, 15000);
