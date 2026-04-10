@@ -1,0 +1,25 @@
+{
+  "schema": "1",
+  "id": "{{NANO_ID}}",
+  "type": "tracker",
+  "lang": "en",
+  "description": "{{DESCRIPTION}}",
+
+  "source": {
+    "url": "https://example.com/feed.json",
+    "method": "GET"
+  },
+
+  "condition": {
+    "type": "json_path",
+    "path": "$.items[*]",
+    "match": "any"
+  },
+
+  "notify": {
+    "telegram": true,
+    "email": false
+  },
+
+  "output_dir": "staging"
+}

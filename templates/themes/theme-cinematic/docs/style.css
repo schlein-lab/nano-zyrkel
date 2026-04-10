@@ -1,0 +1,85 @@
+/* nano-zyrkel theme: cinematic
+ *
+ * Dark, full-bleed, ambient gradient background. Built for showcase
+ * style nano-zyrkels: portals, demos, single-page experiences.
+ * Pair with a user-repo crate that adds particle systems or other
+ * domain-specific animation on top.
+ */
+
+:root {
+  --bg-1:  #0A0612;
+  --bg-2:  #1A1133;
+  --text:  #F5F3FF;
+  --muted: #A78BFA;
+  --brand: #8B5CF6;
+  --accent: #06B6D4;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle at 50% 30%, var(--bg-2) 0%, var(--bg-1) 70%);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--text); }
+
+main {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 1rem;
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  color: var(--muted);
+  max-width: 640px;
+  margin: 0 auto 3rem;
+}
+
+.cards {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(139,92,246,0.25);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(8px);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  text-align: left;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(139,92,246,0.2);
+}
+
+footer {
+  margin-top: 4rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}

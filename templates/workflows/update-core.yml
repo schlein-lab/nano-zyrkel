@@ -1,0 +1,182 @@
+# Reusable workflow: pull the latest binary + WASM core into a user repo.
+#
+# Consumed from a user nano-zyrkel like this:
+#
+#   jobs:
+#     update:
+#       uses: schlein-lab/nano-zyrkel/.github/workflows/update-core.yml@main
+#       with:
+#         binary-pinning: minor   # exact | patch | minor | latest
+#         wasm-pinning: minor
+#         wasm-profile: viz-basic # data | viz-basic | viz-advanced | all
+#       secrets:
+#         token: ${{ secrets.GITHUB_TOKEN }}
+#
+# It reads .nano-zyrkel-versions.json in the caller's repo, asks the
+# nano-zyrkel central repo for the latest matching releases, downloads
+# them into core/bin and core/wasm, updates the version pin file and
+# opens a pull request. The user merges the PR to apply the upgrade.
+#
+# Updates skip every artifact change marked as breaking in
+# compatibility.json — the workflow opens an issue with the migration
+# guide URL instead.
+
+name: Update nano-zyrkel cores
+
+on:
+  workflow_call:
+    inputs:
+      binary-pinning:
+        description: "exact | patch | minor | latest"
+        type: string
+        default: "minor"
+      wasm-pinning:
+        description: "exact | patch | minor | latest"
+        type: string
+        default: "minor"
+      wasm-profile:
+        description: "data | viz-basic | viz-advanced | all"
+        type: string
+        default: "viz-basic"
+      central-repo:
+        description: "Override for the central nano-zyrkel repo"
+        type: string
+        default: "schlein-lab/nano-zyrkel"
+    secrets:
+      token:
+        description: "Token with contents:write + pull-requests:write"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout consumer repo
+        uses: actions/checkout@v4
+
+      - name: Resolve target versions
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          set -euo pipefail
+          versions_file=".nano-zyrkel-versions.json"
+          if [ ! -f "$versions_file" ]; then
+            echo '{"binary":"v0.0.0","wasm":"v0.0.0"}' > "$versions_file"
+          fi
+          current_bin=$(jq -r '.binary // "v0.0.0"' "$versions_file")
+          current_wasm=$(jq -r '.wasm // "v0.0.0"' "$versions_file")
+
+          # Pull compatibility.json from central
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.raw" \
+            "https://api.github.com/repos/${{ inputs.central-repo }}/contents/compatibility.json" \
+            > compatibility.json
+
+          # Highest non-breaking versions per pinning rule
+          target_bin=$(jq -r --arg cur "$current_bin" --arg pin "${{ inputs.binary-pinning }}" '
+            .binary
+            | to_entries
+            | sort_by(.key)
+            | reverse
+            | map(select(
+                (.value.breaking // []) | length == 0
+                or $pin == "latest"
+              ))
+            | (
+                if   $pin == "exact" then map(select(.key == $cur))
+                elif $pin == "patch" then map(select((.key | split(".")[0:2]) == ($cur | split(".")[0:2])))
+                elif $pin == "minor" then map(select((.key | split(".")[0:1]) == ($cur | split(".")[0:1])))
+                else .
+                end
+              )
+            | .[0].key // $cur
+          ' compatibility.json)
+
+          target_wasm=$(jq -r --arg cur "$current_wasm" --arg pin "${{ inputs.wasm-pinning }}" '
+            .wasm
+            | to_entries
+            | sort_by(.key)
+            | reverse
+            | map(select(
+                (.value.breaking // []) | length == 0
+                or $pin == "latest"
+              ))
+            | (
+                if   $pin == "exact" then map(select(.key == $cur))
+                elif $pin == "patch" then map(select((.key | split(".")[0:2]) == ($cur | split(".")[0:2])))
+                elif $pin == "minor" then map(select((.key | split(".")[0:1]) == ($cur | split(".")[0:1])))
+                else .
+                end
+              )
+            | .[0].key // $cur
+          ' compatibility.json)
+
+          echo "current_bin=$current_bin"   >> "$GITHUB_OUTPUT"
+          echo "current_wasm=$current_wasm" >> "$GITHUB_OUTPUT"
+          echo "target_bin=$target_bin"     >> "$GITHUB_OUTPUT"
+          echo "target_wasm=$target_wasm"   >> "$GITHUB_OUTPUT"
+
+      - name: Skip if nothing changed
+        if: steps.resolve.outputs.target_bin == steps.resolve.outputs.current_bin && steps.resolve.outputs.target_wasm == steps.resolve.outputs.current_wasm
+        run: echo "Already up to date." && exit 0
+
+      - name: Download new binary
+        if: steps.resolve.outputs.target_bin != steps.resolve.outputs.current_bin
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          mkdir -p core/bin
+          gh release download "bin-${{ steps.resolve.outputs.target_bin }}" \
+            --repo "${{ inputs.central-repo }}" \
+            --pattern "nano-zyrkel-x86_64-unknown-linux-gnu.tar.gz" \
+            --clobber \
+            --output core/bin/nano-zyrkel.tar.gz
+          tar -xzf core/bin/nano-zyrkel.tar.gz -C core/bin
+          rm core/bin/nano-zyrkel.tar.gz
+          chmod +x core/bin/nano-zyrkel
+
+      - name: Download new WASM
+        if: steps.resolve.outputs.target_wasm != steps.resolve.outputs.current_wasm
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          mkdir -p core/wasm
+          gh release download "wasm-${{ steps.resolve.outputs.target_wasm }}" \
+            --repo "${{ inputs.central-repo }}" \
+            --pattern "wasm-${{ inputs.wasm-profile }}.zip" \
+            --clobber \
+            --output core/wasm/bundle.zip
+          rm -rf core/wasm/profile
+          unzip -q core/wasm/bundle.zip -d core/wasm/profile
+          rm core/wasm/bundle.zip
+
+      - name: Update version pin file
+        run: |
+          jq --arg b "${{ steps.resolve.outputs.target_bin }}" \
+             --arg w "${{ steps.resolve.outputs.target_wasm }}" \
+             '.binary = $b | .wasm = $w' \
+             .nano-zyrkel-versions.json > .nano-zyrkel-versions.json.tmp
+          mv .nano-zyrkel-versions.json.tmp .nano-zyrkel-versions.json
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.token }}
+          commit-message: "chore(core): bump nano-zyrkel cores"
+          branch: nano-zyrkel-core-update
+          title: "Update nano-zyrkel cores"
+          body: |
+            Automated upgrade by the central `update-core` reusable workflow.
+
+            | Component | Current | New |
+            | --- | --- | --- |
+            | Binary | `${{ steps.resolve.outputs.current_bin }}` | `${{ steps.resolve.outputs.target_bin }}` |
+            | WASM   | `${{ steps.resolve.outputs.current_wasm }}` | `${{ steps.resolve.outputs.target_wasm }}` |
+
+            See https://github.com/${{ inputs.central-repo }}/blob/main/compatibility.json for the full version matrix.

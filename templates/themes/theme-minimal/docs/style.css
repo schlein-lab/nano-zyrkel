@@ -1,0 +1,47 @@
+/* nano-zyrkel theme: minimal
+ *
+ * Black on white. Helvetica/system. No animations, no shadows, no
+ * gradients. Built for status pages, error reports and short briefs
+ * where the data should do all the talking.
+ */
+
+:root {
+  --bg: #FFFFFF;
+  --text: #000000;
+  --muted: #555555;
+  --rule: #000000;
+  --max-w: 720px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+a { color: var(--text); text-decoration: underline; }
+
+main { max-width: var(--max-w); margin: 0 auto; padding: 3rem 1.5rem; }
+
+h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem; }
+h2 { font-size: 1rem; font-weight: 700; margin: 2rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+hr { border: none; border-top: 1px solid var(--rule); margin: 1.5rem 0; }
+
+dl { display: grid; grid-template-columns: max-content 1fr; column-gap: 1rem; row-gap: 0.25rem; }
+dt { font-weight: 700; }
+dd { margin: 0; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--rule); }
+th { font-weight: 700; }
+
+.muted { color: var(--muted); }
+
+footer { margin-top: 3rem; font-size: 0.75rem; color: var(--muted); }

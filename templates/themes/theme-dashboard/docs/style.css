@@ -1,0 +1,84 @@
+/* nano-zyrkel theme: dashboard
+ *
+ * Dark, neon accent, monospace headings, dense grid layout. Built for
+ * monitoring / DevOps style nano-zyrkels (watcher, tracker, status
+ * pages). Pair with viz-basic + viz-advanced for the full chart kit.
+ */
+
+:root {
+  --bg:      #0B0F19;
+  --panel:   #111827;
+  --panel-2: #1F2937;
+  --border:  rgba(255,255,255,0.08);
+  --text:    #F3F4F6;
+  --muted:   #9CA3AF;
+  --brand:   #06B6D4;
+  --brand-2: #8B5CF6;
+  --good:    #22C55E;
+  --warn:    #F59E0B;
+  --bad:     #EF4444;
+  --grid-gap: 1rem;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a { color: var(--brand); text-decoration: none; }
+a:hover { color: var(--brand-2); }
+
+main { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
+
+.mono, h1, h2, h3 {
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  letter-spacing: -0.01em;
+}
+h1 { font-size: 1.625rem; margin: 0 0 0.25rem; }
+h2 { font-size: 1rem; margin: 0 0 0.5rem; color: var(--brand); }
+
+.subtitle { color: var(--muted); margin: 0 0 1.5rem; }
+
+.grid {
+  display: grid;
+  gap: var(--grid-gap);
+  grid-template-columns: repeat(12, 1fr);
+}
+.col-3  { grid-column: span 3; }
+.col-4  { grid-column: span 4; }
+.col-6  { grid-column: span 6; }
+.col-12 { grid-column: span 12; }
+
+@media (max-width: 900px) {
+  .col-3, .col-4, .col-6 { grid-column: span 12; }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  position: relative;
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 1.25rem; right: 1.25rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--brand), transparent);
+  opacity: 0.5;
+}
+
+.stat-value { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+.stat-label { font-size: 0.6875rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+canvas { display: block; max-width: 100%; }
+
+footer { color: var(--muted); font-size: 0.75rem; text-align: center; margin-top: 2rem; }

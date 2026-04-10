@@ -1,0 +1,22 @@
+/* Default style for scaffold-interactive-app.
+ * Replace this file with one of the bundled themes from
+ * templates/themes/ for a different look without touching app.js.
+ */
+:root {
+  --bg: #FFFFFF;
+  --card: #F9FAFB;
+  --border: #E5E7EB;
+  --text: #111827;
+  --muted: #6B7280;
+  --brand: #8B5CF6;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font: 14px/1.5 'Inter', system-ui, sans-serif; }
+main { max-width: 1080px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+header h1 { font-size: 1.75rem; margin: 0 0 0.25rem; }
+.subtitle { color: var(--muted); margin: 0 0 1.5rem; }
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+.card h2 { font-size: 1rem; margin: 0 0 0.5rem; color: var(--brand); }
+canvas { display: block; max-width: 100%; }
+footer { margin-top: 3rem; font-size: 0.8125rem; color: var(--muted); text-align: center; }

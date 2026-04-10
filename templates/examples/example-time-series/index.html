@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--
+  Example: Time series line chart
+  ------------------------------
+  Loads a JSON array of `{date, value}` records and draws a line chart
+  with a Y grid, X axis labels and a tooltip on hover.
+
+  Drop this file next to your wasm-core bundle or replace the import path
+  with the location of your `core/wasm/profile/` directory.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Time series</title>
+<style>
+  body { font: 14px/1.5 'Inter', sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
+  .card { border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; }
+</style>
+</head>
+<body>
+<h1>Time series</h1>
+<div class="card">
+  <canvas id="chart"></canvas>
+</div>
+
+<script type="module">
+import init, {
+  install_panic_hook,
+  ChartCanvas, Padding, Scale,
+  draw_y_grid, draw_x_axis,
+  LineChart, Format, Tooltip,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+const data = [
+  { x: Date.parse('2026-01-01'), y: 12 },
+  { x: Date.parse('2026-02-01'), y: 18 },
+  { x: Date.parse('2026-03-01'), y: 22 },
+  { x: Date.parse('2026-04-01'), y: 31 },
+  { x: Date.parse('2026-05-01'), y: 28 },
+  { x: Date.parse('2026-06-01'), y: 35 },
+];
+
+const canvas = new ChartCanvas(
+  document.getElementById('chart'),
+  220,
+  new Padding(40, 12, 12, 28),
+);
+
+const xScale = Scale.time(
+  data[0].x, data[data.length - 1].x,
+  canvas.plotLeft(), canvas.plotLeft() + canvas.plotWidth(),
+);
+const maxY = Math.max(...data.map(d => d.y));
+const yScale = Scale.linear(
+  0, maxY * 1.1,
+  canvas.plotTop() + canvas.plotHeight(), canvas.plotTop(),
+);
+
+draw_y_grid(canvas, yScale, 5, v => Format.fixed(v, 0));
+draw_x_axis(canvas, xScale, 6, v => Format.monthDay(v));
+
+new LineChart(canvas)
+  .x(xScale)
+  .y(yScale)
+  .data(data)
+  .stroke('#8B5CF6', 2)
+  .fillUnder('rgba(139,92,246,0.12)')
+  .draw();
+
+document.getElementById('chart').addEventListener('mousemove', e => {
+  const rect = e.target.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const date = xScale.invert(x);
+  Tooltip.show(e.clientX, e.clientY, Format.date(date));
+});
+document.getElementById('chart').addEventListener('mouseleave', () => Tooltip.hide());
+</script>
+</body>
+</html>

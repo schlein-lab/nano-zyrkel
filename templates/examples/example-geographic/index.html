@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!--
+  Example: Geographic choropleth
+  ------------------------------
+  Renders a country-level world map with the WorldMap primitive. The
+  consumer ships its own polygon outlines (a small JSON file with
+  `{code, rings: [[[lon, lat], ...], ...]}`) so the WASM bundle stays
+  free of large GeoJSON.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Geographic</title>
+<style>
+  body { font: 14px/1.5 'Inter', sans-serif; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  .card { border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; }
+  #legend { margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<h1>Geographic distribution</h1>
+<div class="card">
+  <canvas id="map"></canvas>
+  <div id="legend"></div>
+</div>
+
+<script type="module">
+import init, {
+  install_panic_hook,
+  ChartCanvas, Padding, WorldMap, Legend,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+// Replace with your own outlines + values. The shapes file is a small
+// JSON: [{ code: "DE", rings: [[[lon, lat], ...]] }, ...]
+const shapes = await fetch('shapes.json').then(r => r.json());
+const values = await fetch('values.json').then(r => r.json());
+
+const canvas = new ChartCanvas(
+  document.getElementById('map'),
+  420,
+  new Padding(10, 10, 10, 10),
+);
+
+new WorldMap(canvas)
+  .shapes(shapes)
+  .values(values)
+  .range(0, 1)
+  .palette('#F3F4F6', '#8B5CF6')
+  .background('#FFFFFF')
+  .stroke('#9CA3AF')
+  .draw();
+
+new Legend(document.getElementById('legend'))
+  .items([
+    { label: 'Low',    color: '#F3F4F6' },
+    { label: 'Medium', color: '#A78BFA' },
+    { label: 'High',   color: '#8B5CF6' },
+  ])
+  .draw();
+</script>
+</body>
+</html>

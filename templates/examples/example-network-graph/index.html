@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+  Example: Force-directed network graph
+  -------------------------------------
+  Use NetworkGraph for any node + edge layout: pedigrees, gene
+  interaction maps, citation networks. The layout solver runs in WASM
+  so a few hundred nodes still feel snappy.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Network graph</title>
+<style>
+  body { font: 14px/1.5 'Inter', sans-serif; padding: 2rem; max-width: 900px; margin: 0 auto; }
+  .card { border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; }
+</style>
+</head>
+<body>
+<h1>Network graph</h1>
+<div class="card">
+  <canvas id="graph"></canvas>
+</div>
+
+<script type="module">
+import init, {
+  install_panic_hook,
+  ChartCanvas, Padding, NetworkGraph,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+// Replace with your own data.
+const nodes = [
+  { id: 'A', label: 'Alpha',   color: '#8B5CF6', radius: 9 },
+  { id: 'B', label: 'Beta',    color: '#06B6D4' },
+  { id: 'C', label: 'Gamma',   color: '#22C55E' },
+  { id: 'D', label: 'Delta',   color: '#F59E0B' },
+  { id: 'E', label: 'Epsilon', color: '#EF4444' },
+  { id: 'F', label: 'Zeta',    color: '#EC4899' },
+];
+const edges = [
+  { source: 'A', target: 'B' },
+  { source: 'A', target: 'C' },
+  { source: 'B', target: 'D' },
+  { source: 'C', target: 'D' },
+  { source: 'D', target: 'E' },
+  { source: 'E', target: 'F' },
+  { source: 'A', target: 'F' },
+];
+
+const canvas = new ChartCanvas(
+  document.getElementById('graph'),
+  420,
+  new Padding(20, 20, 20, 20),
+);
+new NetworkGraph(canvas)
+  .nodes(nodes)
+  .edges(edges)
+  .iterations(250)
+  .nodeColor('#06B6D4')
+  .edgeColor('#9CA3AF')
+  .draw();
+</script>
+</body>
+</html>

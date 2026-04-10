@@ -1,0 +1,12 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: schlein-lab/nano-zyrkel/.github/workflows/deploy.yml@main
+    with:
+      docs-path: docs

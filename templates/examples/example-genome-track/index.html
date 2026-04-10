@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<!--
+  Example: 1D coordinate viewer (LinearTrack)
+  -------------------------------------------
+  LinearTrack is the generic version of the genome browser pattern
+  from vusTracker. It works for any 1D coordinate system: genomic
+  positions, time, log lines, anything ordered along a single axis.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Linear track</title>
+<style>
+  body { font: 14px/1.5 'Inter', sans-serif; padding: 2rem; max-width: 1000px; margin: 0 auto; }
+  .card { border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; }
+  .controls { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+  button { padding: 0.4rem 0.8rem; border: 1px solid #D1D5DB; background: white; border-radius: 6px; font: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Linear track</h1>
+<div class="card">
+  <div class="controls">
+    <button id="zoom-out">−</button>
+    <button id="zoom-in">+</button>
+    <button id="reset">Reset</button>
+  </div>
+  <canvas id="track"></canvas>
+</div>
+
+<script type="module">
+import init, {
+  install_panic_hook,
+  ChartCanvas, Padding, LinearTrack,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+// Markers — replace with your own positions.
+// `shape` is one of "circle", "tick", "rect".
+const markers = [
+  { position: 1_500_000,  color: '#EF4444', shape: 'tick' },
+  { position: 2_300_000,  color: '#F59E0B', shape: 'circle' },
+  { position: 4_700_000,  color: '#22C55E', shape: 'circle' },
+  { position: 5_900_000,  color: '#8B5CF6', shape: 'rect' },
+  { position: 7_100_000,  color: '#06B6D4', shape: 'tick' },
+  { position: 9_400_000,  color: '#EAB308', shape: 'circle' },
+];
+
+const fullStart = 0;
+const fullEnd   = 10_000_000;
+let start = fullStart;
+let end = fullEnd;
+
+function draw() {
+  const canvas = new ChartCanvas(
+    document.getElementById('track'),
+    100,
+    new Padding(10, 10, 20, 20),
+  );
+  new LinearTrack(canvas)
+    .domain(start, end)
+    .markers(markers)
+    .trackColor('#E5E7EB')
+    .defaultColor('#8B5CF6')
+    .draw();
+}
+draw();
+
+document.getElementById('zoom-in').onclick = () => {
+  const span = end - start; const c = (start + end) / 2;
+  start = c - span / 4; end = c + span / 4; draw();
+};
+document.getElementById('zoom-out').onclick = () => {
+  const span = end - start; const c = (start + end) / 2;
+  start = c - span; end = c + span; draw();
+};
+document.getElementById('reset').onclick = () => {
+  start = fullStart; end = fullEnd; draw();
+};
+</script>
+</body>
+</html>

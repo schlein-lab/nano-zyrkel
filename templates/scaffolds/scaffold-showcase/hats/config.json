@@ -1,0 +1,13 @@
+{
+  "schema": "1",
+  "id": "{{NANO_ID}}",
+  "type": "showcase",
+  "lang": "en",
+  "description": "{{DESCRIPTION}}",
+
+  "branding": {
+    "color": "#8B5CF6"
+  },
+
+  "widgets": []
+}

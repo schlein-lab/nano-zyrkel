@@ -1,0 +1,45 @@
+# Reusable workflow: deploy the docs/ directory to GitHub Pages.
+#
+# Used by every interactive nano-zyrkel scaffold. The consumer typically
+# pairs this with the data-update.yml workflow so the cron-driven binary
+# refreshes staging/ first, and the resulting site is served from docs/.
+#
+# Consumed from a user nano-zyrkel like this:
+#
+#   jobs:
+#     deploy:
+#       uses: schlein-lab/nano-zyrkel/.github/workflows/deploy.yml@main
+
+name: Deploy GitHub Pages
+
+on:
+  workflow_call:
+    inputs:
+      docs-path:
+        description: "Directory to publish"
+        type: string
+        default: "docs"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ inputs.docs-path }}
+      - id: deployment
+        uses: actions/deploy-pages@v4

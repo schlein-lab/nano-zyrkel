@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--
+  Example: Sortable data table with filter chips
+  ----------------------------------------------
+  Loads a JSON array, lets the user filter by category chips and
+  searches across all configured fields with the SearchIndex helper.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Data table</title>
+<style>
+  body { font: 14px/1.5 'Inter', sans-serif; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  input[type=search] { flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; border: 1px solid #D1D5DB; border-radius: 8px; font: inherit; }
+  .chip { padding: 0.25rem 0.75rem; border-radius: 999px; border: 1px solid #D1D5DB; background: white; cursor: pointer; font-size: 0.8125rem; }
+  .chip.active { background: #8B5CF6; color: white; border-color: #8B5CF6; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #E5E7EB; text-align: left; font-size: 0.875rem; }
+  th { background: #F9FAFB; cursor: pointer; user-select: none; }
+</style>
+</head>
+<body>
+<h1>Data table</h1>
+
+<div class="toolbar">
+  <input id="search" type="search" placeholder="Search...">
+  <button class="chip active" data-filter="all">All</button>
+  <button class="chip" data-filter="active">Active</button>
+  <button class="chip" data-filter="archived">Archived</button>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th data-sort="name">Name</th>
+      <th data-sort="status">Status</th>
+      <th data-sort="value">Value</th>
+    </tr>
+  </thead>
+  <tbody id="rows"></tbody>
+</table>
+
+<script type="module">
+import init, {
+  install_panic_hook,
+  DataLoader, Filter, SearchIndex, Format,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+const loader = new DataLoader();
+const data = await loader.fetch('staging/example/items.json');
+const items = Array.isArray(data) ? data : (data.items ?? []);
+const index = SearchIndex.build(items, ['name', 'status', 'tags']);
+
+let activeFilter = 'all';
+let activeSort = 'name';
+let asc = true;
+
+function render() {
+  const q = document.getElementById('search').value.trim();
+  let result = items;
+  if (q) {
+    const ids = index.query(q);
+    result = ids.map(i => items[i]);
+  }
+  if (activeFilter !== 'all') {
+    result = new Filter().whereEq('status', activeFilter).apply(result);
+  }
+  result.sort((a, b) => {
+    const av = a[activeSort];
+    const bv = b[activeSort];
+    return asc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
+
+  const tbody = document.getElementById('rows');
+  tbody.innerHTML = result.map(r => `
+    <tr>
+      <td>${r.name ?? ''}</td>
+      <td>${r.status ?? ''}</td>
+      <td>${Format.si(r.value ?? 0)}</td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('search').addEventListener('input', render);
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilter = chip.dataset.filter;
+    render();
+  });
+});
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    if (activeSort === th.dataset.sort) asc = !asc;
+    else { activeSort = th.dataset.sort; asc = true; }
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+# Reusable workflow: run the cached nano-zyrkel binary against the
+# consumer's hats/config.json and commit the resulting staging/ output.
+#
+# Designed to be called from a cron schedule in the user repo:
+#
+#   on:
+#     schedule:
+#       - cron: '0 */6 * * *'
+#     workflow_dispatch:
+#
+#   jobs:
+#     run:
+#       uses: schlein-lab/nano-zyrkel/.github/workflows/data-update.yml@main
+#       with:
+#         lang: en
+#       secrets:
+#         telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+#         telegram-chat-id:   ${{ secrets.TELEGRAM_CHAT_ID }}
+#
+# The binary itself is expected to live in core/bin/nano-zyrkel —
+# i.e. has been pulled in by the update-core reusable workflow already.
+
+name: Run nano-zyrkel binary
+
+on:
+  workflow_call:
+    inputs:
+      config-path:
+        description: "Path to the hats/config.json"
+        type: string
+        default: "hats/config.json"
+      lang:
+        description: "Output language (de | en)"
+        type: string
+        default: "de"
+      dry-run:
+        description: "Set to true for a non-mutating dry run"
+        type: boolean
+        default: false
+    secrets:
+      telegram-bot-token:
+        required: false
+      telegram-chat-id:
+        required: false
+      smtp-username:
+        required: false
+      smtp-password:
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify cached binary
+        id: cached
+        run: |
+          if [ -x "core/bin/nano-zyrkel" ]; then
+            echo "have_binary=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have_binary=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fall back to latest binary release
+        if: steps.cached.outputs.have_binary == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p core/bin
+          gh release download \
+            --repo schlein-lab/nano-zyrkel \
+            --pattern "nano-zyrkel-x86_64-unknown-linux-gnu.tar.gz" \
+            --clobber \
+            --output core/bin/nano-zyrkel.tar.gz
+          tar -xzf core/bin/nano-zyrkel.tar.gz -C core/bin
+          rm core/bin/nano-zyrkel.tar.gz
+          chmod +x core/bin/nano-zyrkel
+
+      - name: Execute nano-zyrkel
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.telegram-bot-token }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.telegram-chat-id }}
+          SMTP_USERNAME:      ${{ secrets.smtp-username }}
+          SMTP_PASSWORD:      ${{ secrets.smtp-password }}
+        run: |
+          args="--config ${{ inputs.config-path }} --lang ${{ inputs.lang }}"
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            args="$args --dry-run"
+          fi
+          ./core/bin/nano-zyrkel $args
+
+      - name: Commit staging changes
+        if: ${{ !inputs.dry-run }}
+        run: |
+          git config user.name "nano-zyrkel"
+          git config user.email "nano-zyrkel@users.noreply.github.com"
+          git add staging/
+          git diff --staged --quiet || \
+            git commit -m "data: $(date -u +%Y-%m-%dT%H:%M)"
+          git push || true

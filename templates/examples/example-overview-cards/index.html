@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--
+  Example: Overview cards
+  -----------------------
+  Four KPI cards rendered from a single staging/latest.json snapshot.
+  Each card shows a value, a delta vs the previous run, and a small
+  inline donut for distribution.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Overview cards</title>
+<style>
+  body { font: 14px/1.5 'Inter', sans-serif; padding: 2rem; max-width: 1000px; margin: 0 auto; background: #F9FAFB; }
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .card { background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; display: flex; align-items: center; gap: 1rem; }
+  .stat { flex: 1; }
+  .stat-value { font-size: 1.5rem; font-weight: 700; color: #111827; }
+  .stat-label { font-size: 0.75rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-delta { font-size: 0.8125rem; color: #16A34A; }
+  .stat-delta.down { color: #DC2626; }
+</style>
+</head>
+<body>
+<h1>Overview</h1>
+<div class="grid" id="grid"></div>
+
+<script type="module">
+import init, {
+  install_panic_hook,
+  DataLoader, Aggregator, Donut, Format,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+const loader = new DataLoader();
+const data = await loader.fetch('staging/example/latest.json');
+
+const cards = [
+  { key: 'records',   label: 'Records',   color: '#8B5CF6' },
+  { key: 'matches',   label: 'Matches',   color: '#06B6D4' },
+  { key: 'errors',    label: 'Errors',    color: '#EF4444' },
+  { key: 'fresh_pct', label: 'Freshness', color: '#22C55E', isPercent: true },
+];
+
+const grid = document.getElementById('grid');
+for (const card of cards) {
+  const value = data?.totals?.[card.key] ?? 0;
+  const delta = data?.deltas?.[card.key] ?? 0;
+  const formatted = card.isPercent ? Format.percent(value, 0) : Format.si(value);
+  const deltaClass = delta < 0 ? 'down' : '';
+  const deltaText = delta === 0 ? '—' : (delta > 0 ? '+' : '') + Format.si(delta);
+
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = `
+    <canvas></canvas>
+    <div class="stat">
+      <div class="stat-value">${formatted}</div>
+      <div class="stat-label">${card.label}</div>
+      <div class="stat-delta ${deltaClass}">${deltaText}</div>
+    </div>
+  `;
+  grid.appendChild(el);
+
+  // Mini donut
+  const slices = Object.entries(data?.distribution?.[card.key] ?? {}).map(([k, v]) => ({
+    label: k, value: v, color: card.color,
+  }));
+  if (slices.length > 0) {
+    new Donut(el.querySelector('canvas'), 56)
+      .data(slices)
+      .innerRatio(0.65)
+      .centerLabel(String(value))
+      .centerColor('#111827')
+      .draw();
+  }
+}
+</script>
+</body>
+</html>

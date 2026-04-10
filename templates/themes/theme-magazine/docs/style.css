@@ -1,0 +1,94 @@
+/* nano-zyrkel theme: magazine
+ *
+ * Editorial layout: large serif headlines, generous line spacing, hero
+ * image slot, two-column body. Built for newsletters and curation
+ * outputs (literature alerts, research digests).
+ */
+
+:root {
+  --bg:      #FAF7F2;
+  --paper:   #FFFFFF;
+  --rule:    #1A1A1A;
+  --text:    #1A1A1A;
+  --muted:   #6B6B6B;
+  --accent:  #B8312F;
+  --max-w:   880px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Source Serif Pro', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid currentColor; }
+
+main { max-width: var(--max-w); margin: 0 auto; padding: 4rem 1.5rem; }
+
+.kicker {
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.6875rem;
+  color: var(--accent);
+  margin: 0 0 0.75rem;
+}
+
+h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5rem;
+}
+
+h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 2.5rem 0 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.25rem;
+}
+
+.lede {
+  font-size: 1.25rem;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0 0 2rem;
+}
+
+.body {
+  column-count: 2;
+  column-gap: 2.25rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 720px) {
+  .body { column-count: 1; }
+}
+
+.card {
+  background: var(--paper);
+  padding: 1.5rem;
+  border: 1px solid var(--rule);
+  margin: 2rem 0;
+}
+
+footer {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--rule);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}

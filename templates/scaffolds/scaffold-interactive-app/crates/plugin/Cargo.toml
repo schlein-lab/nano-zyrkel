@@ -1,0 +1,14 @@
+[package]
+name = "{{NANO_ID}}-plugin"
+version = "0.1.0"
+edition = "2021"
+description = "Domain plugin for {{NANO_ID}}"
+
+[lib]
+name = "{{NANO_ID_UNDERSCORED}}_plugin"
+path = "src/lib.rs"
+
+[dependencies]
+nano-zyrkel-core = { git = "https://github.com/schlein-lab/nano-zyrkel", tag = "bin-v0.1.0" }
+serde = "1"
+serde_json = "1"

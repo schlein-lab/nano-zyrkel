@@ -1,0 +1,29 @@
+{
+  "schema": "1",
+  "id": "{{NANO_ID}}",
+  "type": "tracker",
+  "lang": "en",
+  "description": "{{DESCRIPTION}}",
+
+  "branding": {
+    "color": "#8B5CF6"
+  },
+
+  "source": {
+    "url": "https://example.com/feed.json",
+    "method": "GET"
+  },
+
+  "condition": {
+    "type": "json_path",
+    "path": "$.items[*]",
+    "match": "any"
+  },
+
+  "notify": {
+    "telegram": false,
+    "email": false
+  },
+
+  "output_dir": "staging"
+}

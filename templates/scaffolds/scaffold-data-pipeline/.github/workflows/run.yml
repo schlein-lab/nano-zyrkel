@@ -1,0 +1,15 @@
+name: Run nano-zyrkel
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    uses: schlein-lab/nano-zyrkel/.github/workflows/data-update.yml@main
+    with:
+      lang: en
+    secrets:
+      telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      telegram-chat-id:   ${{ secrets.TELEGRAM_CHAT_ID }}
