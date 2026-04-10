@@ -1,0 +1,79 @@
+[package]
+name = "nano-zyrkel-wasm-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "nano-zyrkel WASM core — generic data + visualization building blocks for browser-side nano-zyrkel apps"
+
+[lib]
+name = "nano_zyrkel_wasm_core"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# Default keeps the WASM bundle small: just the data layer.
+# User repos opt into visualization layers via features.
+default = ["data", "config"]
+
+# ── Data layer ──
+# DataLoader, Filter, Aggregator, Stats, Search, Diff, Cache, Retry
+data = []
+
+# ── Config + i18n ──
+# ConfigReader, I18n
+config = []
+
+# ── Visualization: foundation + basic charts ──
+# CanvasSetup, Scale, Axis, ColorPalette, Format,
+# LineChart, BarChart, Donut, Tooltip
+viz-basic = ["data"]
+
+# ── Visualization: extended chart types ──
+# ScatterPlot, Histogram, Heatmap, SortedBar, Legend, EmptyState
+viz-advanced = ["viz-basic"]
+
+# ── Visualization: spatial / map / graph primitives ──
+# LinearTrack, NetworkGraph, WorldMap
+viz-spatial = ["viz-basic"]
+
+# ── Convenience meta-feature ──
+all = ["viz-spatial", "viz-advanced", "config"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1"
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+    "Window",
+    "Document",
+    "Element",
+    "HtmlElement",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "CanvasGradient",
+    "CssStyleDeclaration",
+    "DomRect",
+    "DomTokenList",
+    "Text",
+    "Node",
+    "Performance",
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "Headers",
+    "Storage",
+    "console",
+]
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-bulk-memory"]

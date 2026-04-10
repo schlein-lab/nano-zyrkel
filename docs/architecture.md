@@ -15,6 +15,12 @@
 │  │                      Notify, Action, Runtime, Plugin      │
 │  ├── crates/cli       ← Thin binary: parses args, calls      │
 │  │                      Runtime::run()                       │
+│  ├── crates/wasm-core ← Browser-side library: DataLoader,    │
+│  │                      Filter, Aggregator, Stats, Search,   │
+│  │                      Diff, Cache, ConfigReader, I18n,     │
+│  │                      Charts (Line/Bar/Donut/Scatter/...), │
+│  │                      Spatial (LinearTrack/Network/        │
+│  │                      WorldMap). Compiled to WebAssembly.  │
 │  ├── templates/       ← Themes, examples, scaffolds          │
 │  │                      (NOT linked code, just skeletons)    │
 │  └── compatibility.json                                      │
@@ -89,8 +95,36 @@ it cares about. See `crates/core/src/plugin.rs` for the full trait.
 ## Versioning
 
 The binary release line is tagged `bin-vX.Y.Z`. The companion WASM core
-(separate repo, see the project plan) is tagged independently as
-`wasm-vX.Y.Z`. User repos pin both versions in
-`.nano-zyrkel-versions.json` and the update-core reusable workflow uses the
-matrices in each `compatibility.json` to decide when an upgrade is safe to
-apply automatically.
+(`crates/wasm-core` in the same repo) is tagged independently as
+`wasm-vX.Y.Z`. Both share `compatibility.json` at the repo root.
+
+User repos pin both versions in `.nano-zyrkel-versions.json` and the
+update-core reusable workflow uses the matrices in `compatibility.json`
+to decide when an upgrade is safe to apply automatically.
+
+## WASM core
+
+The WASM core covers everything browser-side nano-zyrkels need:
+
+- **Data layer** — `DataLoader`, `Filter`, `Aggregator`, `Stats`, `Search`,
+  `Diff`, `Cache`, `Retry`. Generic JSON plumbing that runs on the user's
+  CPU instead of the GitHub Actions runner.
+- **Config + i18n** — `ConfigReader` reads the same `hats/config.json`
+  schema the binary core understands; `I18n` looks up translations keyed
+  by language and key.
+- **Visualization** — three feature-gated layers: `viz-basic` (canvas
+  setup, scales, axes, colors, formats, line/bar/donut/tooltip),
+  `viz-advanced` (scatter, histogram, heatmap, sorted-bar, legend, empty
+  state) and `viz-spatial` (linear track, network graph, world map).
+
+Each visualization layer is a Cargo feature. User repos opt in to keep
+their WASM bundles small.
+
+What does **not** belong in `wasm-core`:
+
+- Particle systems or cinematic animations (showcase repo).
+- ACMG variant classification (vusTracker repo).
+- Hardy-Weinberg or pedigree drawing (helix repo).
+
+Those crates can still depend on `wasm-core` and reuse its primitives,
+they just stay outside.
