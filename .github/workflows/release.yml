@@ -32,10 +32,6 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             archive: tar.gz
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            archive: tar.gz
-            cross: true
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             archive: zip
@@ -45,6 +41,9 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
             archive: tar.gz
+          # aarch64-linux is intentionally postponed: native-tls (imap
+          # transport) needs OpenSSL on the cross container. Will be
+          # added back once the binary core's IMAP path moves to rustls.
     steps:
       - uses: actions/checkout@v4
 
