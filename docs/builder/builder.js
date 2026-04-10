@@ -432,7 +432,7 @@ function miniStarterAlert() {
 
 const CATEGORIES = [
   {
-    id: 'showcase', name: 'Startvorlagen', icon: '\u2728',
+    id: 'showcase', name: 'Start', icon: '\u2728',
     blocks: [
       { id: 'start-watcher', name: 'Webseiten-Watcher', desc: 'URL ueberwachen + benachrichtigen', appliesAll: true,
         autoBlocks: ['src-url', 'cond-contains', 'sched-hourly', 'notify-telegram'],
@@ -455,7 +455,7 @@ const CATEGORIES = [
     ]
   },
   {
-    id: 'sources', name: 'Datenquellen', icon: '\uD83D\uDCE1',
+    id: 'sources', name: 'Quellen', icon: '\uD83D\uDCE1',
     blocks: [
       { id: 'src-url', name: 'URL / Webseite', desc: 'HTML-Seite abrufen', configKey: 'source',
         fields: [{ name: 'url', label: 'URL', type: 'url', placeholder: 'https://vhs-hamburg.de/kurse' }],
@@ -484,7 +484,7 @@ const CATEGORIES = [
     ]
   },
   {
-    id: 'conditions', name: 'Bedingungen', icon: '\uD83D\uDD0D',
+    id: 'conditions', name: 'Wenn', icon: '\uD83D\uDD0D',
     blocks: [
       { id: 'cond-contains', name: 'Text-Suche', desc: '"freie Plaetze" taucht auf', configKey: 'condition',
         fields: [{ name: 'value', label: 'Suchtext', placeholder: 'freie Plaetze' }],
@@ -526,7 +526,7 @@ const CATEGORIES = [
     ]
   },
   {
-    id: 'notify', name: 'Benachrichtigungen', icon: '\uD83D\uDD14',
+    id: 'notify', name: 'Melden', icon: '\uD83D\uDD14',
     blocks: [
       { id: 'notify-telegram', name: 'Telegram', desc: 'Bot-Nachricht',
         fields: [{ name: 'bot_token', label: 'Bot Token', placeholder: '123456:ABC-DEF...' }, { name: 'chat_id', label: 'Chat ID', placeholder: '-100123456789' }],
@@ -545,7 +545,7 @@ const CATEGORIES = [
     ]
   },
   {
-    id: 'actions', name: 'Aktionen', icon: '\u26A1',
+    id: 'actions', name: 'Dann', icon: '\u26A1',
     blocks: [
       { id: 'act-webhook', name: 'Webhook aufrufen', desc: 'HTTP POST an URL',
         fields: [{ name: 'url', label: 'Webhook URL', type: 'url' }],
@@ -567,7 +567,7 @@ const CATEGORIES = [
     ]
   },
   {
-    id: 'gui', name: 'Oberflaeche', icon: '\uD83C\uDFA8',
+    id: 'gui', name: 'Design', icon: '\uD83C\uDFA8',
     blocks: [
       { id: 'theme-clinical', name: 'Clinical', desc: 'Medizinisch, blau/weiss',
         colors: { bg: '#ffffff', accent: '#2563eb', card: '#f8fafc' },
@@ -618,9 +618,14 @@ const state = {
   chatOpen: false,
 };
 
+// ─── ACTIVE CATEGORY ────────────────────────────────────────
+
+let activeCategory = 'showcase';
+
 // ─── DOM REFS ────────────────────────────────────────────────
 
-const $categories = document.getElementById('categories');
+const $tabs = document.getElementById('baukasten-tabs');
+const $grid = document.getElementById('baukasten-grid');
 const $vorschau = document.getElementById('vorschau');
 const $vorschauEmpty = document.getElementById('vorschau-empty');
 const $vorschauContent = document.getElementById('vorschau-content');
@@ -670,35 +675,77 @@ function escHtml(s) {
 
 // ─── RENDER CATALOG (LEFT) ──────────────────────────────────
 
-function renderCatalog() {
-  $categories.innerHTML = '';
+function renderTabs() {
+  $tabs.innerHTML = '';
   CATEGORIES.forEach(cat => {
-    const catEl = document.createElement('div');
-    catEl.className = 'category';
-
-    const visibleBlocks = cat.blocks.filter(b => !state.blocks.includes(b.id) || true);
-    catEl.innerHTML = `
-      <div class="category-header" data-cat-id="${cat.id}">
-        <span class="category-chevron">&#9660;</span>
-        <span class="category-name">${cat.name}</span>
-        <span class="category-count">${cat.blocks.length}</span>
-      </div>
-      <div class="category-grid" id="grid-${cat.id}"></div>
+    const inUseCount = cat.blocks.filter(b => state.blocks.includes(b.id)).length;
+    const btn = document.createElement('button');
+    btn.className = 'bk-tab' + (cat.id === activeCategory ? ' active' : '');
+    btn.innerHTML = `
+      <span class="bk-tab-icon">${cat.icon}</span>
+      <span class="bk-tab-label">${cat.name}</span>
+      ${inUseCount > 0 ? `<span class="bk-tab-count">${inUseCount}</span>` : ''}
     `;
-    $categories.appendChild(catEl);
+    btn.addEventListener('click', () => {
+      activeCategory = cat.id;
+      renderTabs();
+      renderGrid();
+    });
+    $tabs.appendChild(btn);
+  });
+}
 
-    const header = catEl.querySelector('.category-header');
-    header.addEventListener('click', () => {
-      catEl.classList.toggle('collapsed');
+function renderGrid() {
+  $grid.innerHTML = '';
+  const cat = CATEGORIES.find(c => c.id === activeCategory);
+  if (!cat) return;
+
+  cat.blocks.forEach(block => {
+    const inUse = state.blocks.includes(block.id);
+    const card = document.createElement('div');
+    card.className = 'vcard' + (inUse ? ' in-use' : '');
+    card.dataset.blockId = block.id;
+
+    const visualHtml = block.visual ? block.visual() : '';
+    card.innerHTML = `
+      <div class="vcard-visual">${visualHtml}</div>
+      <div class="vcard-label">
+        <div class="vcard-name">${block.name}</div>
+        <div class="vcard-desc">${block.desc}</div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      if (!inUse) addBlock(block.id);
     });
 
-    const grid = catEl.querySelector('.category-grid');
+    $grid.appendChild(card);
+  });
+}
+
+function renderCatalog() {
+  renderTabs();
+  renderGrid();
+}
+
+// ─── SEARCH / FILTER ─────────────────────────────────────────
+
+$searchInput.addEventListener('input', () => {
+  const q = $searchInput.value.toLowerCase().trim();
+  if (q.length === 0) {
+    renderGrid();
+    return;
+  }
+  // Search across ALL categories, show matching cards
+  $grid.innerHTML = '';
+  CATEGORIES.forEach(cat => {
     cat.blocks.forEach(block => {
+      const text = (block.name + ' ' + block.desc + ' ' + cat.name).toLowerCase();
+      if (!text.includes(q)) return;
       const inUse = state.blocks.includes(block.id);
       const card = document.createElement('div');
       card.className = 'vcard' + (inUse ? ' in-use' : '');
       card.dataset.blockId = block.id;
-
       const visualHtml = block.visual ? block.visual() : '';
       card.innerHTML = `
         <div class="vcard-visual">${visualHtml}</div>
@@ -707,29 +754,9 @@ function renderCatalog() {
           <div class="vcard-desc">${block.desc}</div>
         </div>
       `;
-
-      card.addEventListener('click', () => {
-        if (!inUse) addBlock(block.id);
-      });
-
-      grid.appendChild(card);
+      card.addEventListener('click', () => { if (!inUse) addBlock(block.id); });
+      $grid.appendChild(card);
     });
-  });
-}
-
-// ─── SEARCH / FILTER ─────────────────────────────────────────
-
-$searchInput.addEventListener('input', () => {
-  const q = $searchInput.value.toLowerCase().trim();
-  document.querySelectorAll('.vcard').forEach(card => {
-    const block = BLOCK_MAP[card.dataset.blockId];
-    if (!block) return;
-    const text = (block.name + ' ' + block.desc + ' ' + block.category).toLowerCase();
-    card.classList.toggle('filter-hidden', q.length > 0 && !text.includes(q));
-  });
-  document.querySelectorAll('.category').forEach(cat => {
-    const visible = cat.querySelectorAll('.vcard:not(.filter-hidden)');
-    cat.style.display = visible.length === 0 && q.length > 0 ? 'none' : '';
   });
 });
 
