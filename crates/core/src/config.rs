@@ -292,24 +292,78 @@ pub enum Condition {
         #[serde(default = "default_reminders")]
         remind_at_days: Vec<u32>,
     },
+
+    /// Numeric threshold against a value extracted via JSONPath or
+    /// CSS selector. Triggers when the comparison evaluates to true.
+    Threshold {
+        /// Where to read the value from. Supported prefixes:
+        /// `json:` for JSONPath, `css:` for a CSS selector, `regex:` for
+        /// a capture-group regex.
+        path: String,
+        /// Comparison operator: `gt`, `gte`, `lt`, `lte`, `eq`, `ne`.
+        op: String,
+        /// Right-hand side of the comparison.
+        value: f64,
+    },
+
+    /// Triggers when the upstream feed has not changed for too long.
+    /// `max_age_hours` is compared against the freshest record in the
+    /// fetched payload (using `date_field` if given, otherwise the
+    /// HTTP `Last-Modified` header).
+    Stale {
+        max_age_hours: u32,
+        #[serde(default)]
+        date_field: Option<String>,
+    },
+
+    /// Validates the fetched JSON payload against a JSON Schema and
+    /// triggers when the document is INVALID. Useful for monitoring
+    /// API contracts and catching upstream breakage early.
+    JsonSchema {
+        /// Inline schema, OR…
+        #[serde(default)]
+        schema: Option<serde_json::Value>,
+        /// …a path to a schema file relative to the config directory.
+        #[serde(default)]
+        schema_path: Option<String>,
+    },
+
+    /// Triggers when the structural diff between the previous run and
+    /// the current run exceeds `min_changes` records. State is read
+    /// from `staging/{nano_id}/state.json`.
+    Diff {
+        /// Field that uniquely identifies a record (e.g. `id`).
+        key_field: String,
+        /// Minimum number of added + removed + modified records to fire.
+        #[serde(default)]
+        min_changes: u32,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Notify {
-    /// Send via Telegram (uses TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID env vars)
+    /// Send via Telegram (reads `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`).
     #[serde(default)]
     pub telegram: bool,
 
-    /// Send via email (uses EMAIL_TO, EMAIL_FROM, SMTP_* env vars)
+    /// Send via email (reads `EMAIL_TO`, `EMAIL_FROM`, `SMTP_*`).
     #[serde(default)]
     pub email: bool,
 
+    /// Send via Discord webhook (reads `DISCORD_WEBHOOK_URL`).
+    #[serde(default)]
+    pub discord: bool,
+
+    /// Send via Slack incoming webhook (reads `SLACK_WEBHOOK_URL`).
+    #[serde(default)]
+    pub slack: bool,
+
     /// Custom notification message template.
-    /// Placeholders: {id}, {description}, {summary}, {url}, {value}
+    /// Placeholders: `{id}`, `{description}`, `{summary}`, `{url}`, `{value}`.
     #[serde(default)]
     pub message: Option<String>,
 
-    /// Include extracted data in notification
+    /// Include extracted data in the notification body.
     #[serde(default)]
     pub include_extracted: bool,
 }
@@ -354,6 +408,35 @@ pub enum Action {
         /// Files to create/modify: { "path": "content" }
         #[serde(default)]
         files: std::collections::HashMap<String, String>,
+    },
+
+    /// Post a comment on an existing GitHub issue or pull request.
+    GithubComment {
+        /// Repository in `owner/name` form.
+        repo: String,
+        /// Issue or PR number.
+        number: u64,
+        /// Comment body, with the standard placeholder set.
+        body_template: String,
+    },
+
+    /// Create a GitHub release for an existing tag.
+    GithubRelease {
+        /// Repository in `owner/name` form.
+        repo: String,
+        /// Tag name (must already exist on the default branch).
+        tag: String,
+        /// Release title.
+        name: String,
+        /// Release notes body, with the standard placeholder set.
+        #[serde(default)]
+        body_template: Option<String>,
+        /// Mark as draft instead of publishing immediately.
+        #[serde(default)]
+        draft: bool,
+        /// Mark as prerelease.
+        #[serde(default)]
+        prerelease: bool,
     },
 
     /// Trigger another HAT (chain workflows)

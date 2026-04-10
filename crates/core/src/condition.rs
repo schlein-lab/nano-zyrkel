@@ -224,6 +224,136 @@ pub async fn evaluate(condition: &Condition, content: &str, config: &HatConfig) 
             })
         }
 
+        Condition::Threshold { path, op, value } => {
+            let extracted = extract_numeric_value(path, content)?;
+            let matched = match op.as_str() {
+                "gt"  => extracted >  *value,
+                "gte" => extracted >= *value,
+                "lt"  => extracted <  *value,
+                "lte" => extracted <= *value,
+                "eq"  => (extracted - *value).abs() < f64::EPSILON,
+                "ne"  => (extracted - *value).abs() >= f64::EPSILON,
+                other => anyhow::bail!("unknown threshold op: {}", other),
+            };
+            Ok(ConditionResult {
+                matched,
+                summary: if matched {
+                    format!("threshold {} {} {} satisfied (got {})", path, op, value, extracted)
+                } else {
+                    format!("threshold {} {} {} not met (got {})", path, op, value, extracted)
+                },
+                extracted_value: Some(serde_json::json!({
+                    "path": path,
+                    "op": op,
+                    "expected": value,
+                    "actual": extracted,
+                })),
+                content_hash,
+            })
+        }
+
+        Condition::Stale { max_age_hours, date_field } => {
+            let max_age = chrono::Duration::hours(*max_age_hours as i64);
+            let now = chrono::Utc::now();
+            let parsed = newest_timestamp(content, date_field.as_deref())?;
+            let age = now.signed_duration_since(parsed);
+            let matched = age > max_age;
+            Ok(ConditionResult {
+                matched,
+                summary: if matched {
+                    format!(
+                        "stale: newest record is {} old (limit {}h)",
+                        format_duration(age),
+                        max_age_hours
+                    )
+                } else {
+                    format!("fresh: newest record is {} old", format_duration(age))
+                },
+                extracted_value: Some(serde_json::json!({
+                    "newest": parsed.to_rfc3339(),
+                    "age_hours": age.num_minutes() as f64 / 60.0,
+                    "max_age_hours": max_age_hours,
+                })),
+                content_hash,
+            })
+        }
+
+        Condition::JsonSchema { schema, schema_path } => {
+            let payload: serde_json::Value = serde_json::from_str(content)
+                .map_err(|e| anyhow::anyhow!("payload is not JSON: {}", e))?;
+            let schema_json = if let Some(s) = schema {
+                s.clone()
+            } else if let Some(p) = schema_path {
+                let s = std::fs::read_to_string(p)
+                    .map_err(|e| anyhow::anyhow!("read schema {}: {}", p, e))?;
+                serde_json::from_str(&s)?
+            } else {
+                anyhow::bail!("json_schema condition requires schema or schema_path")
+            };
+            let validator = jsonschema::JSONSchema::compile(&schema_json)
+                .map_err(|e| anyhow::anyhow!("invalid schema: {}", e))?;
+            let validation = validator.validate(&payload);
+            let errors: Vec<String> = match validation {
+                Ok(()) => Vec::new(),
+                Err(errs) => errs.map(|e| e.to_string()).collect(),
+            };
+            let matched = !errors.is_empty();
+            Ok(ConditionResult {
+                matched,
+                summary: if matched {
+                    format!("schema validation failed: {} error(s)", errors.len())
+                } else {
+                    "schema validation passed".into()
+                },
+                extracted_value: Some(serde_json::json!({ "errors": errors })),
+                content_hash,
+            })
+        }
+
+        Condition::Diff { key_field, min_changes } => {
+            let parsed: serde_json::Value = serde_json::from_str(content)
+                .map_err(|e| anyhow::anyhow!("payload is not JSON: {}", e))?;
+            let new_records = match parsed.as_array() {
+                Some(arr) => arr.clone(),
+                None => anyhow::bail!("diff condition expects a JSON array"),
+            };
+
+            let state_path = format!("{}/{}/state.json", config.output_dir, config.id);
+            let old_records: Vec<serde_json::Value> = std::fs::read_to_string(&state_path)
+                .ok()
+                .and_then(|s| serde_json::from_str::<Vec<serde_json::Value>>(&s).ok())
+                .unwrap_or_default();
+
+            let summary = compute_diff(key_field, &old_records, &new_records);
+            let total = summary.added.len() + summary.removed.len() + summary.modified.len();
+            let matched = total >= *min_changes as usize;
+
+            // Persist the new snapshot for the next run.
+            if let Some(parent) = std::path::Path::new(&state_path).parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = std::fs::write(
+                &state_path,
+                serde_json::to_string(&new_records).unwrap_or_default(),
+            );
+
+            Ok(ConditionResult {
+                matched,
+                summary: format!(
+                    "+{} added / -{} removed / ~{} modified",
+                    summary.added.len(),
+                    summary.removed.len(),
+                    summary.modified.len()
+                ),
+                extracted_value: Some(serde_json::json!({
+                    "added": summary.added,
+                    "removed": summary.removed,
+                    "modified": summary.modified,
+                })),
+                content_hash,
+            })
+        }
+
         Condition::Llm { question, model } => {
             // Stufe 2: LLM-based condition evaluation
             // Uses Codex CLI (codex exec) or falls back to raw Anthropic API
@@ -508,4 +638,182 @@ async fn call_anthropic(api_key: &str, prompt: &str) -> Result<String> {
         .as_str()
         .map(|s| s.to_string())
         .ok_or_else(|| anyhow::anyhow!("Unexpected Anthropic API response"))
+}
+
+// ─── Helpers for the threshold / staleness / diff conditions ──────────
+
+/// Read a numeric value from `content` at `path`. Supported prefixes:
+///
+/// - `json:$.field.path` — parse `content` as JSON and apply JSONPath
+/// - `css:.selector` — load `content` as HTML and read the first match
+/// - `regex:^pattern\(\d+\)$` — capture group 1 as the numeric value
+fn extract_numeric_value(path: &str, content: &str) -> anyhow::Result<f64> {
+    if let Some(jp) = path.strip_prefix("json:") {
+        let value: serde_json::Value = serde_json::from_str(content)?;
+        let parser = jsonpath_rust::JsonPath::try_from(jp)
+            .map_err(|e| anyhow::anyhow!("invalid jsonpath {}: {}", jp, e))?;
+        let result = parser.find(&value);
+        let first = result
+            .as_array()
+            .and_then(|arr| arr.first())
+            .ok_or_else(|| anyhow::anyhow!("jsonpath {} returned no result", jp))?;
+        match first {
+            serde_json::Value::Number(n) => Ok(n.as_f64().unwrap_or(0.0)),
+            serde_json::Value::String(s) => s.parse::<f64>().map_err(Into::into),
+            other => anyhow::bail!("threshold target is not numeric: {}", other),
+        }
+    } else if let Some(sel) = path.strip_prefix("css:") {
+        let document = scraper::Html::parse_document(content);
+        let selector = scraper::Selector::parse(sel)
+            .map_err(|e| anyhow::anyhow!("bad selector {}: {:?}", sel, e))?;
+        let text: String = document
+            .select(&selector)
+            .next()
+            .map(|el| el.text().collect::<String>())
+            .ok_or_else(|| anyhow::anyhow!("selector {} matched nothing", sel))?;
+        text.trim()
+            .replace(',', ".")
+            .parse::<f64>()
+            .map_err(|e| anyhow::anyhow!("could not parse '{}' as number: {}", text, e))
+    } else if let Some(re_str) = path.strip_prefix("regex:") {
+        let re = regex::Regex::new(re_str)?;
+        let captures = re
+            .captures(content)
+            .ok_or_else(|| anyhow::anyhow!("regex {} did not match", re_str))?;
+        let value = captures
+            .get(1)
+            .ok_or_else(|| anyhow::anyhow!("regex {} has no capture group", re_str))?
+            .as_str();
+        value.parse::<f64>().map_err(Into::into)
+    } else {
+        anyhow::bail!("threshold path needs json:, css: or regex: prefix")
+    }
+}
+
+/// Find the freshest timestamp in the payload. If `field` is given,
+/// look for that JSON property; otherwise scrape any RFC3339 string.
+fn newest_timestamp(
+    content: &str,
+    field: Option<&str>,
+) -> anyhow::Result<chrono::DateTime<chrono::Utc>> {
+    use chrono::TimeZone;
+    let mut newest: Option<chrono::DateTime<chrono::Utc>> = None;
+    if let Some(f) = field {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(content) {
+            collect_timestamps(&value, f, &mut |ts| {
+                if newest.map(|n| ts > n).unwrap_or(true) {
+                    newest = Some(ts);
+                }
+            });
+        }
+    }
+    if newest.is_none() {
+        // Generic fallback: any RFC3339 substring in the body.
+        let re = regex::Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})")?;
+        for m in re.find_iter(content) {
+            if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(m.as_str()) {
+                let utc = parsed.with_timezone(&chrono::Utc);
+                if newest.map(|n| utc > n).unwrap_or(true) {
+                    newest = Some(utc);
+                }
+            }
+        }
+    }
+    newest.ok_or_else(|| {
+        let _ = chrono::Utc.timestamp_opt(0, 0); // silence unused
+        anyhow::anyhow!("no timestamp found in payload")
+    })
+}
+
+fn collect_timestamps(
+    value: &serde_json::Value,
+    field: &str,
+    sink: &mut impl FnMut(chrono::DateTime<chrono::Utc>),
+) {
+    match value {
+        serde_json::Value::Object(map) => {
+            if let Some(v) = map.get(field) {
+                if let Some(s) = v.as_str() {
+                    if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(s) {
+                        sink(parsed.with_timezone(&chrono::Utc));
+                    }
+                }
+            }
+            for child in map.values() {
+                collect_timestamps(child, field, sink);
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            for child in arr {
+                collect_timestamps(child, field, sink);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn format_duration(d: chrono::Duration) -> String {
+    let mins = d.num_minutes().max(0);
+    let h = mins / 60;
+    let m = mins % 60;
+    if h > 0 {
+        format!("{}h{:02}m", h, m)
+    } else {
+        format!("{}m", m)
+    }
+}
+
+/// Output of [`compute_diff`].
+pub struct DiffSummary {
+    pub added: Vec<serde_json::Value>,
+    pub removed: Vec<serde_json::Value>,
+    pub modified: Vec<serde_json::Value>,
+}
+
+/// Compare two JSON arrays keyed by `key_field` and return added,
+/// removed and modified records. Records present in both whose JSON
+/// serialization differs end up in `modified`.
+pub fn compute_diff(
+    key_field: &str,
+    old: &[serde_json::Value],
+    new: &[serde_json::Value],
+) -> DiffSummary {
+    use std::collections::HashMap;
+    let key_of = |r: &serde_json::Value| -> Option<String> {
+        r.get(key_field).map(|v| match v {
+            serde_json::Value::String(s) => s.clone(),
+            other => other.to_string(),
+        })
+    };
+
+    let mut old_map: HashMap<String, &serde_json::Value> = HashMap::new();
+    for r in old {
+        if let Some(k) = key_of(r) {
+            old_map.insert(k, r);
+        }
+    }
+    let mut new_map: HashMap<String, &serde_json::Value> = HashMap::new();
+    for r in new {
+        if let Some(k) = key_of(r) {
+            new_map.insert(k, r);
+        }
+    }
+
+    let mut added = Vec::new();
+    let mut modified = Vec::new();
+    for (k, v) in &new_map {
+        match old_map.get(k) {
+            None => added.push((*v).clone()),
+            Some(o) if o != v => modified.push((*v).clone()),
+            _ => {}
+        }
+    }
+    let mut removed = Vec::new();
+    for (k, v) in &old_map {
+        if !new_map.contains_key(k) {
+            removed.push((*v).clone());
+        }
+    }
+
+    DiffSummary { added, removed, modified }
 }

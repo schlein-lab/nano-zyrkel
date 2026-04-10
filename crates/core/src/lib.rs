@@ -33,6 +33,7 @@ pub mod condition;
 pub mod config;
 pub mod fetch;
 pub mod i18n;
+pub mod introspect;
 pub mod literature;
 pub mod maildesk;
 pub mod notify;

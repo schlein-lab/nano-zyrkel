@@ -11,6 +11,14 @@ pub async fn send(notify: &Notify, config: &HatConfig, result: &ConditionResult,
         send_telegram(&message, lang).await?;
     }
 
+    if notify.discord {
+        send_discord(&message).await?;
+    }
+
+    if notify.slack {
+        send_slack(&message).await?;
+    }
+
     if notify.email {
         tracing::warn!("Email notification not yet implemented");
     }
@@ -68,6 +76,57 @@ pub async fn send_telegram(message: &str, lang: &str) -> Result<()> {
     } else {
         let body = response.text().await.unwrap_or_default();
         tracing::error!("{}", i18n::msg(lang, "notify_failed", &[&body]));
+    }
+
+    Ok(())
+}
+
+/// Send a message to a Discord channel via incoming webhook.
+///
+/// Reads the webhook URL from the `DISCORD_WEBHOOK_URL` environment
+/// variable. The webhook is created in Discord under
+/// *Server Settings → Integrations → Webhooks → New Webhook*.
+pub async fn send_discord(message: &str) -> Result<()> {
+    let url = std::env::var("DISCORD_WEBHOOK_URL")
+        .map_err(|_| anyhow::anyhow!("DISCORD_WEBHOOK_URL not set"))?;
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({ "content": message }))
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        tracing::info!("notify: Discord delivered");
+    } else {
+        let body = response.text().await.unwrap_or_default();
+        tracing::error!("notify: Discord failed: {}", body);
+    }
+
+    Ok(())
+}
+
+/// Send a message to a Slack channel via incoming webhook.
+///
+/// Reads the webhook URL from the `SLACK_WEBHOOK_URL` environment
+/// variable. Create the webhook at <https://api.slack.com/messaging/webhooks>.
+pub async fn send_slack(message: &str) -> Result<()> {
+    let url = std::env::var("SLACK_WEBHOOK_URL")
+        .map_err(|_| anyhow::anyhow!("SLACK_WEBHOOK_URL not set"))?;
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({ "text": message }))
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        tracing::info!("notify: Slack delivered");
+    } else {
+        let body = response.text().await.unwrap_or_default();
+        tracing::error!("notify: Slack failed: {}", body);
     }
 
     Ok(())

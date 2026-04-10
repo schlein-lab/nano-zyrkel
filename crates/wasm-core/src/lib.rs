@@ -67,8 +67,10 @@ pub mod data;
 #[cfg(feature = "config")]
 pub mod config;
 
-#[cfg(any(feature = "viz-basic", feature = "viz-advanced", feature = "viz-spatial"))]
+#[cfg(any(feature = "viz-basic", feature = "viz-advanced", feature = "viz-spatial", feature = "viz-ui"))]
 pub mod viz;
+
+pub mod introspect;
 
 // ── One-time module init ───────────────────────────────────────────────
 

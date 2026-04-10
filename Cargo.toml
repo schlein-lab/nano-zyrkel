@@ -33,6 +33,8 @@ imap = "2"
 native-tls = "0.2"
 base64 = "0.22"
 mailparse = "0.15"
+quick-xml = { version = "0.36", features = ["serialize"] }
+jsonschema = { version = "0.18", default-features = false }
 
 [profile.release]
 lto = "thin"

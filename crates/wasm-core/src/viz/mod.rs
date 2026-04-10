@@ -26,3 +26,6 @@ pub mod advanced;
 
 #[cfg(feature = "viz-spatial")]
 pub mod spatial;
+
+#[cfg(feature = "viz-ui")]
+pub mod ui;

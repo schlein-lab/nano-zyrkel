@@ -271,6 +271,72 @@ async fn run_action_inner(
             })
         }
 
+        Action::GithubComment { repo, number, body_template } => {
+            let token = std::env::var("GH_TOKEN")
+                .or_else(|_| std::env::var("GITHUB_TOKEN"))
+                .map_err(|_| anyhow::anyhow!("GH_TOKEN not set"))?;
+
+            let body = interpolate(body_template, config, result);
+
+            let client = reqwest::Client::new();
+            let resp = client
+                .post(format!(
+                    "https://api.github.com/repos/{}/issues/{}/comments",
+                    repo, number
+                ))
+                .header("authorization", format!("Bearer {}", token))
+                .header("user-agent", "ZyrkelHAT")
+                .header("accept", "application/vnd.github+json")
+                .json(&serde_json::json!({ "body": body }))
+                .send()
+                .await?;
+
+            let status = resp.status();
+            tracing::info!("GitHub comment on {}#{}: {}", repo, number, status);
+
+            Ok(ActionOutcome::Executed {
+                action_type: "github_comment".into(),
+                detail: format!("{}#{}", repo, number),
+                success: status.is_success(),
+            })
+        }
+
+        Action::GithubRelease { repo, tag, name, body_template, draft, prerelease } => {
+            let token = std::env::var("GH_TOKEN")
+                .or_else(|_| std::env::var("GITHUB_TOKEN"))
+                .map_err(|_| anyhow::anyhow!("GH_TOKEN not set"))?;
+
+            let body = body_template
+                .as_ref()
+                .map(|t| interpolate(t, config, result))
+                .unwrap_or_default();
+
+            let client = reqwest::Client::new();
+            let resp = client
+                .post(format!("https://api.github.com/repos/{}/releases", repo))
+                .header("authorization", format!("Bearer {}", token))
+                .header("user-agent", "ZyrkelHAT")
+                .header("accept", "application/vnd.github+json")
+                .json(&serde_json::json!({
+                    "tag_name": tag,
+                    "name": interpolate(name, config, result),
+                    "body": body,
+                    "draft": draft,
+                    "prerelease": prerelease,
+                }))
+                .send()
+                .await?;
+
+            let status = resp.status();
+            tracing::info!("GitHub release {} on {}: {}", tag, repo, status);
+
+            Ok(ActionOutcome::Executed {
+                action_type: "github_release".into(),
+                detail: format!("{} → {}", repo, tag),
+                success: status.is_success(),
+            })
+        }
+
         Action::Chain { actions } => {
             let mut results = Vec::new();
             for (i, sub_action) in actions.iter().enumerate() {
@@ -394,6 +460,8 @@ fn action_label(action: &Action) -> String {
         Action::HttpRequest { url, method, .. } => format!("{} {}", method, url),
         Action::GithubIssue { repo, title, .. } => format!("Issue: {} — {}", repo, title),
         Action::GithubPr { repo, title, .. } => format!("PR: {} — {}", repo, title),
+        Action::GithubComment { repo, number, .. } => format!("Comment: {}#{}", repo, number),
+        Action::GithubRelease { repo, tag, .. } => format!("Release: {} → {}", repo, tag),
         Action::TriggerHat { repo, workflow, .. } => format!("Trigger: {}/{}", repo, workflow),
         Action::PublishApi { path } => format!("Publish: api/{}", path),
         Action::Shell { command, .. } => format!("Shell: {}", &command[..command.len().min(50)]),
