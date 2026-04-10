@@ -8,6 +8,13 @@
       "released": "2026-04-10",
       "breaking": [],
       "notes": "Initial workspace refactor. Library + thin CLI separation, Plugin trait introduced. CLI surface unchanged from monolithic v0.x."
+    },
+    "v0.2.0": {
+      "config_schema": "v1",
+      "library_api": "v1",
+      "released": "2026-04-10",
+      "breaking": [],
+      "notes": "Layered SDK landed. New notify channels (Discord, Slack), new GitHub actions (GithubComment, GithubRelease), new fetchers (RSS/Atom, Sitemap, iCal — all quick-xml backed), new conditions (Threshold, Stale, JsonSchema, Diff). New core::introspect module + nano-zyrkel introspect CLI subcommand publish the full SDK catalog as JSON for the browser-based builder. CLI surface and library API stay backward compatible."
     }
   },
   "wasm": {
@@ -23,6 +30,20 @@
       ],
       "breaking": [],
       "notes": "Initial wasm-core release. Data layer (DataLoader, Filter, Aggregator, Stats, Search, Diff, Cache, Retry) plus Config + I18n. Visualization layer with basic charts (LineChart, BarChart, Donut, Tooltip), advanced (ScatterPlot, Histogram, Heatmap, SortedBar, Legend, EmptyState) and spatial (LinearTrack, NetworkGraph, WorldMap)."
+    },
+    "v0.2.0": {
+      "wasm_api": "v1",
+      "config_schema": "v1",
+      "released": "2026-04-10",
+      "feature_profiles": [
+        "data",
+        "viz-basic",
+        "viz-advanced",
+        "viz-ui",
+        "all"
+      ],
+      "breaking": [],
+      "notes": "Layered SDK landed. New data primitives (Csv, DateTime, UrlState, Router, WebSocketClient). New viz-ui feature gate with Toast, Modal, Tabs, Accordion, Icons (~30 inline SVG), TextInput/Select/Range form bindings, Sortable, Markdown (pulldown-cmark), Easing + Tween. New introspect module exposes the WASM SDK catalog via the wasmSdkSchema() JS function for the browser-based builder."
     }
   }
 }

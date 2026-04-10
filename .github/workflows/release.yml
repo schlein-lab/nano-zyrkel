@@ -104,6 +104,15 @@ jobs:
           find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec mv {} release/ \;
           ls -la release/
 
+      - name: Build Linux binary for schema export
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate schema.json from the binary
+        run: |
+          cargo build --release -p nano-zyrkel
+          ./target/release/nano-zyrkel introspect --out release/schema.json
+          ls -la release/schema.json
+
       - name: Determine tag
         id: tag
         run: |

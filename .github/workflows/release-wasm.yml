@@ -35,8 +35,10 @@ jobs:
             features: "data,config,viz-basic"
           - profile: viz-advanced
             features: "data,config,viz-basic,viz-advanced"
+          - profile: viz-ui
+            features: "data,config,viz-basic,viz-ui"
           - profile: all
-            features: "data,config,viz-basic,viz-advanced,viz-spatial"
+            features: "data,config,viz-basic,viz-advanced,viz-spatial,viz-ui"
     steps:
       - uses: actions/checkout@v4
 
