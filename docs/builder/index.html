@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>nano-zyrkel Project Studio</title>
-  <meta name="description" content="Baue mächtige autonome Agenten — Monitoring, Dashboards, Lernplattformen, Email-Bots, Daten-Pipelines — alles mit einer winzigen Binary + WASM auf GitHub Actions.">
+  <meta name="description" content="Baue autonome Agenten visuell — Datenquellen, Bedingungen, Benachrichtigungen zusammenstecken.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -13,216 +13,91 @@
 
 <!-- ═══════════════ HEADER ═══════════════ -->
 <header class="header">
-  <div class="header-brand">
+  <div class="header-left">
     <span class="header-mark">&#x2B21;</span>
     <span class="header-title">nano-zyrkel</span>
     <span class="header-tag">project studio</span>
   </div>
-  <div class="header-status">
-    <span class="status-dot" id="status-dot"></span>
-    <span id="status-text">Suche lokalen Zyrkel...</span>
+  <div class="header-right">
+    <div class="zyrkel-status" id="zyrkel-status" title="Zyrkel nicht verbunden">
+      <span class="status-dot offline"></span>
+      <span class="status-label" id="status-label">Offline</span>
+    </div>
+    <button class="btn-header" id="btn-code" title="Generierten Code anzeigen">Code anzeigen</button>
+    <button class="btn-header btn-primary hidden" id="btn-deploy" title="Direkt deployen">Jetzt deployen</button>
   </div>
-  <nav class="header-nav">
-    <button class="mode-tab active" data-mode="showcase" id="tab-showcase">Entdecken</button>
-    <button class="mode-tab" data-mode="creator" id="tab-creator">Erstellen</button>
-    <button class="mode-tab" data-mode="fleet" id="tab-fleet" disabled>Fleet</button>
-  </nav>
 </header>
 
-<!-- ═══════════════ EBENE 1: SHOWCASE ═══════════════ -->
-<section class="section" id="section-showcase">
-  <h1 class="section-title">Was nano-zyrkels können</h1>
-  <p class="section-sub">
-    Winzige Rust-Binaries + WASM die auf GitHub Actions laufen — kostenlos, ohne Server.
-    Von einfachen Alerts bis zu Plattformen mit Millionen Datensätzen.
-  </p>
-  <div class="showcase-grid" id="showcase-grid"></div>
+<!-- ═══════════════ STUDIO (2 columns) ═══════════════ -->
+<main class="studio">
 
-  <div class="text-center mt-lg">
-    <button class="btn-primary" style="padding:12px 32px; font-size:15px; border-radius:var(--radius);" onclick="switchMode('creator')">
-      Eigenen nano-zyrkel bauen &#8594;
-    </button>
-  </div>
-</section>
-
-<!-- ═══════════════ EBENE 2: CREATOR ═══════════════ -->
-<section class="creator hidden" id="section-creator">
-
-  <!-- Left: Input (Chat oder Wizard) -->
-  <div class="creator-input">
-    <div class="flex-between mb-md">
-      <div class="flex gap-sm">
-        <button class="mode-tab active" data-input="chat" id="input-tab-chat">KI-Assistent</button>
-        <button class="mode-tab" data-input="wizard" id="input-tab-wizard">Schritt für Schritt</button>
-      </div>
+  <!-- LEFT: Baukasten -->
+  <aside class="baukasten" id="baukasten">
+    <div class="baukasten-search">
+      <input type="text" id="search-input" placeholder="Bausteine suchen..." autocomplete="off" spellcheck="false">
     </div>
-
-    <!-- ─── Chat Panel ─── -->
-    <div class="chat-panel" id="chat-panel">
-      <div class="chat-messages" id="chat-messages">
-        <div class="chat-msg system">
-          Beschreibe was du bauen willst — ich helfe dir dabei.
-        </div>
-      </div>
-      <div class="chat-input-area">
-        <textarea class="chat-input" id="chat-input" rows="1"
-          placeholder="z.B. &quot;Überwache ob der Schwimmkurs freigeschaltet wird&quot; oder &quot;Baue ein Dashboard für Wetterdaten&quot;"></textarea>
-        <button class="chat-send" id="chat-send">Senden</button>
-      </div>
+    <div class="baukasten-categories" id="categories">
+      <!-- filled by JS -->
     </div>
+  </aside>
 
-    <!-- ─── Wizard Panel ─── -->
-    <div class="wizard-panel hidden" id="wizard-panel">
-      <div class="wizard-progress" id="wizard-progress"></div>
+  <!-- RIGHT: Vorschau -->
+  <section class="vorschau" id="vorschau"
+    ondragover="handleDragOver(event)"
+    ondragleave="handleDragLeave(event)"
+    ondrop="handleDrop(event)">
+    <div class="vorschau-empty" id="vorschau-empty">
+      <div class="empty-icon">&#x2B21;</div>
+      <h2>Ziehe Bausteine hierher</h2>
+      <p>Starte mit einer Datenquelle, fuege Bedingungen hinzu, waehle Benachrichtigungen.</p>
+      <p class="empty-hint">Oder klicke auf einen Baustein im Baukasten links.</p>
+    </div>
+    <div class="vorschau-content" id="vorschau-content">
+      <!-- filled with dropped blocks -->
+    </div>
+  </section>
 
-      <!-- Step 1: Capabilities -->
-      <div class="wizard-step active" data-step="0" id="step-0">
-        <h2 class="wizard-step-title">Was baust du?</h2>
-        <p class="wizard-step-hint">Wähle die Fähigkeiten die dein nano-zyrkel haben soll. Kombiniere frei.</p>
-        <div class="cap-grid" id="cap-grid"></div>
-        <div class="match-strip" id="match-strip">
-          <div class="match-strip-label">Ähnliche Projekte</div>
-          <div class="match-strip-list" id="match-list"></div>
-        </div>
-        <details class="docs-expand mt-md">
-          <summary>Was ist ein nano-zyrkel?</summary>
-          <p>Ein autonomer Agent der als GitHub-Repo lebt. Eine Rust-Binary (~5 MB) läuft per Cron auf GitHub Actions — kostenlos, ohne Server. Optional: WASM-Dashboard im Browser (~80 KB). Kann alles: Monitoring, Dashboards, Lernplattformen, Email-Agenten, Daten-Pipelines, Cloud-Integration.</p>
-        </details>
-      </div>
+</main>
 
-      <!-- Step 2: Sources & Targets -->
-      <div class="wizard-step" data-step="1" id="step-1">
-        <h2 class="wizard-step-title">Datenquellen &amp; Ziele</h2>
-        <p class="wizard-step-hint">Woher kommen die Daten und wohin sollen sie?</p>
-        <div id="step1-dynamic"></div>
-      </div>
-
-      <!-- Step 3: Logic & Conditions -->
-      <div class="wizard-step" data-step="2" id="step-2">
-        <h2 class="wizard-step-title">Logik &amp; Bedingungen</h2>
-        <p class="wizard-step-hint">Was soll eine Aktion auslösen?</p>
-        <div id="condition-grid" class="condition-grid"></div>
-        <div id="condition-detail"></div>
-        <div class="mt-lg">
-          <div class="preview-label">Aktions-Kette</div>
-          <div class="action-chain" id="action-chain"></div>
-          <div class="action-add" id="action-add">+ Aktion hinzufügen</div>
-        </div>
-      </div>
-
-      <!-- Step 4: Schedule & Notifications -->
-      <div class="wizard-step" data-step="3" id="step-3">
-        <h2 class="wizard-step-title">Zeitplan &amp; Benachrichtigungen</h2>
-        <p class="wizard-step-hint">Wie oft prüfen und wohin benachrichtigen?</p>
-        <div class="preview-label">Zeitplan</div>
-        <div class="schedule-grid" id="schedule-grid"></div>
-        <div id="next-runs" class="form-hint mb-md"></div>
-
-        <div class="toggle-row">
-          <span>Stille-Bestätigung<br><span class="text-muted" style="font-size:11px">Regelmäßig bestätigen dass der Agent noch läuft</span></span>
-          <div class="toggle on" id="toggle-silence"></div>
-        </div>
-
-        <div class="preview-label mt-md">Benachrichtigungs-Kanäle</div>
-        <div class="channel-grid" id="channel-grid"></div>
-
-        <div class="form-group mt-md" id="notification-template-group">
-          <label class="form-label">Nachrichten-Template</label>
-          <textarea class="form-textarea" id="notify-template" rows="3" placeholder="Beispiel: {id}: {summary} — {url}"></textarea>
-          <div class="form-hint">Platzhalter: {id}, {summary}, {url}, {value}, {description}</div>
-        </div>
-
-        <div class="toggle-row">
-          <span>Genehmigung<br><span class="text-muted" style="font-size:11px">Vor kritischen Aktionen nachfragen?</span></span>
-          <select class="form-select" id="approval-select" style="width:auto; max-width:200px">
-            <option value="log_only" selected>Nur loggen</option>
-            <option value="none">Alles automatisch</option>
-            <option value="ask_first">Erst per Telegram fragen</option>
-            <option value="within_budget">Automatisch bis Budget</option>
-          </select>
-        </div>
-
-        <details class="docs-expand mt-md">
-          <summary>Wie funktioniert GitHub Actions?</summary>
-          <p>GitHub Actions führt deinen nano-zyrkel-Binary automatisch zu den eingestellten Zeiten aus — komplett kostenlos im Free Tier. Du brauchst keinen eigenen Server. Der nano-zyrkel läuft, prüft seine Bedingungen, und benachrichtigt dich wenn nötig.</p>
-        </details>
-      </div>
-
-      <!-- Step 5: Appearance -->
-      <div class="wizard-step" data-step="4" id="step-4">
-        <h2 class="wizard-step-title">Aussehen &amp; Features</h2>
-        <p class="wizard-step-hint">Nur relevant wenn dein nano-zyrkel eine Browser-Oberfläche hat.</p>
-
-        <div class="preview-label">Theme</div>
-        <div class="theme-gallery" id="theme-gallery"></div>
-
-        <div class="preview-label mt-lg">WASM Features</div>
-        <p class="form-hint mb-sm">Welche Browser-Fähigkeiten braucht dein Dashboard?</p>
-        <div class="feature-grid" id="feature-grid"></div>
-
-        <div class="toggle-row mt-lg">
-          <span>Custom Rust Plugin<br><span class="text-muted" style="font-size:11px">Eigene Logik in Rust/WASM</span></span>
-          <div class="toggle" id="toggle-plugin"></div>
-        </div>
-      </div>
-
-      <!-- Step 6: Result -->
-      <div class="wizard-step" data-step="5" id="step-5">
-        <h2 class="wizard-step-title">Dein nano-zyrkel</h2>
-        <p class="wizard-step-hint">Alles bereit. Prüfe die Vorschau und erstelle dein Projekt.</p>
-        <div id="result-content"></div>
-      </div>
-
-      <div class="wizard-nav">
-        <button class="btn-back hidden" id="wizard-back">&#8592; Zurück</button>
-        <button class="btn-next" id="wizard-next">Weiter &#8594;</button>
-      </div>
+<!-- ═══════════════ CODE DRAWER ═══════════════ -->
+<div class="code-drawer" id="code-drawer">
+  <div class="drawer-header">
+    <div class="drawer-tabs">
+      <button class="drawer-tab active" data-tab="config">config.json</button>
+      <button class="drawer-tab" data-tab="workflow">run.yml</button>
+      <button class="drawer-tab" data-tab="readme">README.md</button>
+    </div>
+    <div class="drawer-actions">
+      <button class="btn-copy" id="btn-copy" title="Kopieren">Kopieren</button>
+      <button class="btn-close-drawer" id="btn-close-drawer" title="Schliessen">&times;</button>
     </div>
   </div>
-
-  <!-- Right: Preview -->
-  <div class="creator-preview">
-    <div class="preview-section" id="preview-notifications">
-      <div class="preview-label">Benachrichtigungs-Vorschau</div>
-      <div class="email-previews" id="email-previews"></div>
-    </div>
-
-    <div class="preview-section hidden" id="preview-dashboard">
-      <div class="preview-label">Dashboard-Vorschau</div>
-      <div class="dashboard-preview" id="dashboard-preview"></div>
-    </div>
-
-    <div class="preview-section" id="preview-config">
-      <div class="preview-label">Generierter Code</div>
-      <div class="config-block" id="config-block">
-        <div class="config-header">
-          <div class="config-tabs" id="config-tabs"></div>
-          <button class="config-copy" id="config-copy">Kopieren</button>
-        </div>
-        <pre class="config-body" id="config-body"></pre>
-      </div>
-    </div>
-
-    <div class="preview-section" id="preview-steps">
-      <div class="preview-label">Nächste Schritte</div>
-      <ol class="steps-list" id="steps-list"></ol>
-    </div>
-
-    <div id="deploy-area" class="mt-md"></div>
+  <div class="drawer-body">
+    <pre class="drawer-code" id="drawer-code"></pre>
   </div>
-</section>
-
-<!-- ═══════════════ EBENE 3: FLEET ═══════════════ -->
-<section class="section fleet-section" id="section-fleet">
-  <div class="flex-between mb-md">
-    <div>
-      <h1 class="section-title">Fleet</h1>
-      <p class="section-sub" style="margin-bottom:0">Deine nano-zyrkels — überwacht und gemanaged von deinem lokalen Zyrkel.</p>
-    </div>
-    <button class="btn-primary" onclick="switchMode('creator')">+ Neuer nano-zyrkel</button>
+  <div class="drawer-footer" id="drawer-footer">
+    <h4>Naechste Schritte</h4>
+    <ol id="next-steps"></ol>
   </div>
-  <div class="fleet-grid" id="fleet-grid"></div>
-</section>
+</div>
+
+<!-- ═══════════════ LLM CHAT BUBBLE ═══════════════ -->
+<button class="chat-fab" id="chat-fab" title="KI-Assistent">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+  </svg>
+</button>
+<div class="chat-overlay hidden" id="chat-overlay">
+  <div class="chat-header">
+    <span>KI-Assistent</span>
+    <button class="chat-close" id="chat-close">&times;</button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-row">
+    <input type="text" id="chat-input" placeholder="Beschreibe was du bauen willst..." autocomplete="off">
+    <button class="chat-send" id="chat-send">&#x27A4;</button>
+  </div>
+</div>
 
 <script src="builder.js"></script>
 </body>
