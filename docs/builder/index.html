@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<!-- ═══════════════ HEADER ═══════════════ -->
+<!-- HEADER -->
 <header class="header">
   <div class="header-left">
     <span class="header-mark">&#x2B21;</span>
@@ -28,38 +28,30 @@
   </div>
 </header>
 
-<!-- ═══════════════ STUDIO (2 columns) ═══════════════ -->
+<!-- STUDIO (2 columns) -->
 <main class="studio">
 
-  <!-- LEFT: Baukasten -->
+  <!-- LEFT: Visual Catalog -->
   <aside class="baukasten" id="baukasten">
     <div class="baukasten-search">
       <input type="text" id="search-input" placeholder="Bausteine suchen..." autocomplete="off" spellcheck="false">
     </div>
-    <div class="baukasten-categories" id="categories">
-      <!-- filled by JS -->
-    </div>
+    <div class="baukasten-categories" id="categories"></div>
   </aside>
 
-  <!-- RIGHT: Vorschau -->
-  <section class="vorschau" id="vorschau"
-    ondragover="handleDragOver(event)"
-    ondragleave="handleDragLeave(event)"
-    ondrop="handleDrop(event)">
+  <!-- RIGHT: Preview Canvas -->
+  <section class="vorschau" id="vorschau">
     <div class="vorschau-empty" id="vorschau-empty">
       <div class="empty-icon">&#x2B21;</div>
-      <h2>Ziehe Bausteine hierher</h2>
-      <p>Starte mit einer Datenquelle, fuege Bedingungen hinzu, waehle Benachrichtigungen.</p>
-      <p class="empty-hint">Oder klicke auf einen Baustein im Baukasten links.</p>
+      <h2>Klicke auf einen Baustein</h2>
+      <p>Starte mit einer Vorlage oder waehle einzelne Bausteine aus dem Katalog links.</p>
     </div>
-    <div class="vorschau-content" id="vorschau-content">
-      <!-- filled with dropped blocks -->
-    </div>
+    <div class="vorschau-content" id="vorschau-content"></div>
   </section>
 
 </main>
 
-<!-- ═══════════════ CODE DRAWER ═══════════════ -->
+<!-- CODE DRAWER -->
 <div class="code-drawer" id="code-drawer">
   <div class="drawer-header">
     <div class="drawer-tabs">
@@ -81,7 +73,7 @@
   </div>
 </div>
 
-<!-- ═══════════════ LLM CHAT BUBBLE ═══════════════ -->
+<!-- LLM CHAT FAB -->
 <button class="chat-fab" id="chat-fab" title="KI-Assistent">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
