@@ -33,10 +33,15 @@
 
   <!-- LEFT: Visual Catalog -->
   <aside class="baukasten" id="baukasten">
-    <div class="baukasten-search">
-      <input type="text" id="search-input" placeholder="Bausteine suchen..." autocomplete="off" spellcheck="false">
+    <div class="baukasten-tabs" id="baukasten-tabs">
+      <!-- Filled by JS: icon tabs for each category -->
     </div>
-    <div class="baukasten-categories" id="categories"></div>
+    <div class="baukasten-search">
+      <input type="text" id="search-input" placeholder="Suchen..." autocomplete="off" spellcheck="false">
+    </div>
+    <div class="baukasten-grid" id="baukasten-grid">
+      <!-- Filled by JS: visual cards for the active category -->
+    </div>
   </aside>
 
   <!-- RIGHT: Preview Canvas -->
