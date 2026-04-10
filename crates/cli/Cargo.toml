@@ -5,14 +5,20 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "nano-zyrkel CLI — autonomous agent runner"
+homepage.workspace = true
+rust-version.workspace = true
+description = "Command-line runner for the nano-zyrkel SDK. Drives a single nano-zyrkel through fetch → check → notify → act on a schedule."
+documentation = "https://docs.rs/nano-zyrkel"
+readme = "../../README.md"
+keywords = ["agent", "automation", "cli", "scheduler", "github-actions"]
+categories = ["command-line-utilities"]
 
 [[bin]]
 name = "nano-zyrkel"
 path = "src/main.rs"
 
 [dependencies]
-nano-zyrkel-core = { path = "../core" }
+nano-zyrkel-core = { version = "0.2.0", path = "../core" }
 anyhow = { workspace = true }
 clap = { workspace = true }
 tokio = { workspace = true }

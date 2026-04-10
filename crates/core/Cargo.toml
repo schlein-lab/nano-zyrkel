@@ -5,7 +5,13 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "nano-zyrkel core library — config, fetchers, conditions, actions, notifiers, runtime"
+homepage.workspace = true
+rust-version.workspace = true
+description = "Core library for the nano-zyrkel SDK: typed config, fetchers, conditions, actions, notifiers and runtime for GitHub-native autonomous agents."
+documentation = "https://docs.rs/nano-zyrkel-core"
+readme = "../../README.md"
+keywords = ["agent", "automation", "scheduler", "github-actions", "sdk"]
+categories = ["command-line-utilities", "web-programming::http-client", "asynchronous"]
 
 [lib]
 name = "nano_zyrkel_core"

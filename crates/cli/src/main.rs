@@ -20,7 +20,7 @@ use nano_zyrkel_core::{introspect, HatConfig, RunOptions, Runtime};
     name = "nano-zyrkel",
     version,
     about = "nano-zyrkel — autonomous agent runner",
-    long_about = "nano-zyrkel SDK CLI. Without a subcommand the legacy `--config X` flow runs."
+    long_about = "nano-zyrkel SDK CLI.\n\nQuickest path to seeing it work:\n  nano-zyrkel demo            # self-contained pipeline run, no config, no secrets\n  nano-zyrkel introspect      # print every fetcher / condition / action / notifier\n  nano-zyrkel run --config X  # run a real nano-zyrkel\n\nWithout a subcommand the legacy `--config X` flow runs."
 )]
 struct Cli {
     /// Path to the nano config JSON file (legacy form, equivalent to `run --config`).
@@ -62,6 +62,15 @@ enum Command {
         #[arg(short, long)]
         out: Option<PathBuf>,
     },
+
+    /// Run a self-contained demo nano-zyrkel.
+    ///
+    /// Pulls the public GitHub API, evaluates a JSON-path condition,
+    /// and walks through every pipeline stage in dry-run mode. Needs no
+    /// secrets, no config file, no network beyond `api.github.com`.
+    /// Use this right after `cargo install nano-zyrkel` to confirm the
+    /// SDK works end to end on your machine.
+    Demo,
 }
 
 #[tokio::main]
@@ -101,6 +110,9 @@ async fn main() -> Result<()> {
             println!("config OK: {}", path.display());
             return Ok(());
         }
+        Some(Command::Demo) => {
+            return run_demo(&cli.lang).await;
+        }
         // Default + explicit `run` use the same code path.
         Some(Command::Run) | None => {}
     }
@@ -119,4 +131,70 @@ async fn main() -> Result<()> {
     };
 
     Runtime::new(config).run(opts).await
+}
+
+/// Embedded demo config — public GitHub API, no secrets, no side effects.
+const DEMO_CONFIG: &str = r#"{
+  "schema": "1",
+  "id": "nano-zyrkel-demo",
+  "type": "tracker",
+  "lang": "en",
+  "description": "Self-contained nano-zyrkel demo. Hits the public GitHub API and walks through every pipeline stage in dry-run mode.",
+  "source": {
+    "url": "https://api.github.com/repos/schlein-lab/nano-zyrkel",
+    "method": "GET"
+  },
+  "condition": {
+    "type": "json_path",
+    "path": "$.full_name",
+    "match": "any"
+  },
+  "notify": {
+    "telegram": false,
+    "email": false,
+    "discord": false,
+    "slack": false
+  },
+  "output_dir": "staging"
+}"#;
+
+async fn run_demo(lang: &str) -> Result<()> {
+    use std::io::Write;
+
+    println!();
+    println!("┌─────────────────────────────────────────────────────────┐");
+    println!("│  nano-zyrkel demo                                       │");
+    println!("│                                                         │");
+    println!("│  Reads a public GitHub API endpoint, evaluates a        │");
+    println!("│  JSONPath condition, and walks through every pipeline   │");
+    println!("│  stage in dry-run mode. No secrets required.            │");
+    println!("└─────────────────────────────────────────────────────────┘");
+    println!();
+
+    let tmp = std::env::temp_dir().join("nano-zyrkel-demo");
+    std::fs::create_dir_all(&tmp).context("create temp dir")?;
+    let cfg_path = tmp.join("config.json");
+    {
+        let mut f = std::fs::File::create(&cfg_path).context("write demo config")?;
+        f.write_all(DEMO_CONFIG.as_bytes())?;
+    }
+    println!("→ wrote demo config to {}", cfg_path.display());
+    println!("→ source:    https://api.github.com/repos/schlein-lab/nano-zyrkel");
+    println!("→ condition: $.full_name (json_path)");
+    println!("→ dry_run:   true (no notifiers, no actions fired)");
+    println!();
+
+    let config = HatConfig::load(&cfg_path).context("load demo config")?;
+    let opts = RunOptions {
+        lang: lang.to_string(),
+        dry_run: true,
+        backfill: None,
+    };
+
+    Runtime::new(config).run(opts).await?;
+
+    println!();
+    println!("✓ Demo complete. Replace the URL in {} to run against your own data,", cfg_path.display());
+    println!("  or run `nano-zyrkel introspect` to see every fetcher, condition, action and notifier the SDK ships with.");
+    Ok(())
 }

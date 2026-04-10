@@ -1,0 +1,46 @@
+# Publish the nano-zyrkel SDK documentation site to GitHub Pages.
+#
+# Two things live under docs/:
+#   1. Markdown guides (architecture, theming, recipes, builder-guide, …)
+#   2. The live builder app at docs/builder/
+#
+# We do not run a static site generator: GitHub Pages serves the directory
+# as-is and the live builder is a plain ES module fetching the manifest
+# from raw.githubusercontent.com.
+
+name: Publish SDK site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "templates/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v4
+      - name: Upload docs/
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

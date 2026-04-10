@@ -5,7 +5,13 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "nano-zyrkel WASM core — generic data + visualization building blocks for browser-side nano-zyrkel apps"
+homepage.workspace = true
+rust-version.workspace = true
+description = "Browser-side core for the nano-zyrkel SDK: data loaders, charting primitives, UI components and i18n compiled to WebAssembly."
+documentation = "https://docs.rs/nano-zyrkel-wasm-core"
+readme = "../../README.md"
+keywords = ["wasm", "webassembly", "charts", "dataviz", "sdk"]
+categories = ["wasm", "web-programming", "visualization"]
 
 [lib]
 name = "nano_zyrkel_wasm_core"

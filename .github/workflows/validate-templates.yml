@@ -1,0 +1,36 @@
+# Validate every shipped template against the v1 contract.
+#
+# Backs the "templates: passing" badge in the README. Runs on every push and
+# pull request that touches templates/, the validator script, or this workflow.
+#
+# A failure here means at least one of the following:
+#   - manifest.json is out of sync with the directory tree
+#   - a template.json is missing required fields or references missing files
+#   - a placeholder in a template file does not map to any declared slot
+
+name: validate-templates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "templates/**"
+      - "scripts/validate_templates.py"
+      - ".github/workflows/validate-templates.yml"
+  pull_request:
+    paths:
+      - "templates/**"
+      - "scripts/validate_templates.py"
+      - ".github/workflows/validate-templates.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run template validator
+        run: python scripts/validate_templates.py

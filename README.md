@@ -4,11 +4,60 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/schlein-lab/nano-zyrkel/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <a href="https://github.com/schlein-lab/nano-zyrkel/actions/workflows/ci.yml"><img src="https://github.com/schlein-lab/nano-zyrkel/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/schlein-lab/nano-zyrkel/actions/workflows/validate-templates.yml"><img src="https://github.com/schlein-lab/nano-zyrkel/actions/workflows/validate-templates.yml/badge.svg" alt="templates"></a>
+  <a href="https://github.com/schlein-lab/nano-zyrkel/actions/workflows/pages.yml"><img src="https://github.com/schlein-lab/nano-zyrkel/actions/workflows/pages.yml/badge.svg" alt="pages"></a>
+  <a href="https://crates.io/crates/nano-zyrkel-core"><img src="https://img.shields.io/crates/v/nano-zyrkel-core.svg?label=core" alt="crates.io: core"></a>
+  <a href="https://crates.io/crates/nano-zyrkel"><img src="https://img.shields.io/crates/v/nano-zyrkel.svg?label=cli" alt="crates.io: cli"></a>
+  <a href="https://docs.rs/nano-zyrkel-core"><img src="https://img.shields.io/docsrs/nano-zyrkel-core?label=docs.rs" alt="docs.rs"></a>
   <a href="https://github.com/schlein-lab/nano-zyrkel/releases"><img src="https://img.shields.io/github/v/release/schlein-lab/nano-zyrkel?sort=semver" alt="Release"></a>
-  <img src="https://img.shields.io/badge/lang-Rust-orange.svg" alt="Rust">
-  <img src="https://img.shields.io/badge/runtime-GitHub%20Actions-2088FF.svg" alt="GitHub Actions">
+  <a href="https://github.com/schlein-lab/nano-zyrkel/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
 </p>
+
+<p align="center">
+  <a href="https://schlein-lab.github.io/nano-zyrkel/builder/"><strong>→ Open the live builder</strong></a>
+  &nbsp;·&nbsp;
+  <a href="docs/getting-started.md">Quickstart</a>
+  &nbsp;·&nbsp;
+  <a href="docs/why-nano-zyrkel.md">Why this and not X</a>
+  &nbsp;·&nbsp;
+  <a href="docs/timing.md">Numbers</a>
+</p>
+
+---
+
+## See it run before you install anything
+
+| | | |
+| :---: | :---: | :---: |
+| **[VUS Tracker](https://schlein-lab.github.io/nano-zyrkel-vusTracker/)** | **[Helix](https://schlein-lab.github.io/nano-zyrkel-helix/)** | **[Showcase room](https://schlein-lab.github.io/nano-zyrkel-showcase/)** |
+| Variant intelligence platform built on a `tracker` scaffold + the `theme-clinical` theme. 4.4M ClinVar entries refreshed daily. | Interactive human-genetics teaching suite built on the `interactive-app` scaffold + the `theme-magazine` theme. Pure WASM, zero backend. | Cinematic portal that lists every published nano-zyrkel. The portal itself is a `showcase` scaffold. |
+
+The three sites above are the canonical reference nano-zyrkels. Every commit
+to the SDK has to keep them green.
+
+## 30 seconds from zero to a running agent
+
+```bash
+cargo install nano-zyrkel
+nano-zyrkel demo
+```
+
+That second command does not need a config file, an API key, or even a
+working network beyond `api.github.com`. It walks through the entire
+fetch → check → notify → act pipeline against the public GitHub API in
+dry-run mode and prints the result. If it works, the SDK is wired up
+correctly on your machine. If it does not, the error tells you what to
+fix in one line.
+
+When you are ready to build a real one:
+
+1. Open the [live builder](https://schlein-lab.github.io/nano-zyrkel/builder/).
+2. Pick a scaffold, fill in three fields, download the zip.
+3. Push it to a fresh GitHub repo and enable Actions.
+
+The repo it produces is wired up with the same reusable workflows the
+reference nano-zyrkels above use. There is no step four.
 
 ---
 
@@ -399,9 +448,13 @@ read their `Cargo.toml`, `.nano-zyrkel-versions.json` and
 | [`docs/deploying.md`][dd]           | …you want a non-GitHub-Pages target (Cloudflare, Forge…) |
 | [`docs/i18n-guide.md`][di]          | …you want a nano-zyrkel in multiple languages            |
 | [`docs/builder-guide.md`][db]       | …you are building tooling on top of the SDK schema       |
+| [`docs/why-nano-zyrkel.md`][dw]     | …you are evaluating this against Zapier / Airflow / cron |
+| [`docs/timing.md`][dn]              | …you want concrete numbers on build, run and bundle size |
 | [`templates/manifest.json`][tm]     | …you want a machine-readable list of every template      |
 | [`templates/TEMPLATE-SCHEMA.md`][ts]| …you are writing your own template                       |
 | [`compatibility.json`][cj]          | …you need the version matrix and breaking-change log     |
+| [`CHANGELOG.md`][cl]                | …you want to know what landed between releases           |
+| [`CONTRIBUTING.md`][cg]             | …you are about to open a PR                              |
 
 [da]: docs/architecture.md
 [dg]: docs/getting-started.md
@@ -412,9 +465,13 @@ read their `Cargo.toml`, `.nano-zyrkel-versions.json` and
 [dd]: docs/deploying.md
 [di]: docs/i18n-guide.md
 [db]: docs/builder-guide.md
+[dw]: docs/why-nano-zyrkel.md
+[dn]: docs/timing.md
 [tm]: templates/manifest.json
 [ts]: templates/TEMPLATE-SCHEMA.md
 [cj]: compatibility.json
+[cl]: CHANGELOG.md
+[cg]: CONTRIBUTING.md
 
 ---
 

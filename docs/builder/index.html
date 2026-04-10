@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nano-zyrkel SDK · Live Builder</title>
+  <meta name="description" content="Pick a scaffold or theme, fill in a few fields, download a ready-to-push nano-zyrkel repository as a zip." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">⬡</span>
+      <span class="brand-name">nano-zyrkel</span>
+      <span class="brand-tag">SDK builder</span>
+    </div>
+    <nav class="topbar-nav">
+      <a href="https://github.com/schlein-lab/nano-zyrkel">Repo</a>
+      <a href="../getting-started.md">Docs</a>
+      <a href="../builder-guide.md">Spec</a>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <aside class="picker">
+      <h2>1. Pick a starting point</h2>
+      <p class="hint">Scaffolds are full nano-zyrkels. Themes restyle a scaffold. Examples are bite-sized snippets you can lift into any repo.</p>
+
+      <div class="kind-tabs">
+        <button class="kind-tab active" data-kind="scaffold">Scaffolds</button>
+        <button class="kind-tab" data-kind="theme">Themes</button>
+        <button class="kind-tab" data-kind="example">Examples</button>
+      </div>
+
+      <ul id="template-list" class="template-list"></ul>
+    </aside>
+
+    <section class="form-pane">
+      <div id="form-empty" class="form-empty">
+        <h1>Generate a nano-zyrkel without a single command</h1>
+        <p>Choose any scaffold, theme or example on the left. Fill in a handful of fields. Download a zip and push it to GitHub. The repo it produces is wired up with the same reusable workflows the rest of the SDK uses.</p>
+        <ul class="bullets">
+          <li>Schemas come straight from <code>templates/manifest.json</code></li>
+          <li>Slot substitution happens in your browser — no server round trip</li>
+          <li>The builder is itself a nano-zyrkel hosted on GitHub Pages</li>
+        </ul>
+      </div>
+
+      <div id="form-host" class="form-host" hidden>
+        <header class="form-header">
+          <div>
+            <h1 id="tpl-name"></h1>
+            <p id="tpl-description" class="muted"></p>
+            <ul id="tpl-tags" class="tag-row"></ul>
+          </div>
+          <div class="requires" id="tpl-requires"></div>
+        </header>
+
+        <form id="slots-form" class="slots-form"></form>
+
+        <div class="actions">
+          <button id="btn-preview" type="button" class="btn btn-secondary">Preview files</button>
+          <button id="btn-download" type="button" class="btn btn-primary">Download zip</button>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <header class="preview-header">
+            <h2>Preview</h2>
+            <span id="preview-count" class="muted"></span>
+          </header>
+          <div class="preview-body">
+            <ul id="file-list" class="file-list"></ul>
+            <pre id="file-content" class="file-content"><code></code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Sources fetched live from <code>raw.githubusercontent.com/schlein-lab/nano-zyrkel/main</code></span>
+    <span id="status" class="status">idle</span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="builder.js" type="module"></script>
+</body>
+</html>

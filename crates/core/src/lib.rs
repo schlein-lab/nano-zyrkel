@@ -24,7 +24,7 @@
 //! [`runtime::Runtime`] before calling `run()`. The core stays generic and
 //! reusable across many independent nano-zyrkel agents.
 
-#![doc(html_root_url = "https://docs.rs/nano-zyrkel-core/0.1.0")]
+#![doc(html_root_url = "https://docs.rs/nano-zyrkel-core/0.2.0")]
 
 // ── Public modules (stable API surface) ──
 pub mod action;
