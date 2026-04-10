@@ -1,0 +1,20 @@
+[package]
+name = "nano-zyrkel"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "nano-zyrkel CLI — autonomous agent runner"
+
+[[bin]]
+name = "nano-zyrkel"
+path = "src/main.rs"
+
+[dependencies]
+nano-zyrkel-core = { path = "../core" }
+anyhow = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

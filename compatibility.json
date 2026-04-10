@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "_comment": "Versioning matrix for nano-zyrkel binary core. Consumed by the update-core reusable workflow in user repos to decide whether an update is safe to apply automatically. Read https://github.com/schlein-lab/nano-zyrkel/blob/main/docs/architecture.md for the full versioning policy.",
+  "binary": {
+    "v0.1.0": {
+      "config_schema": "v1",
+      "library_api": "v1",
+      "released": "2026-04-10",
+      "breaking": [],
+      "notes": "Initial workspace refactor. Library + thin CLI separation, Plugin trait introduced. CLI surface unchanged from monolithic v0.x."
+    }
+  }
+}

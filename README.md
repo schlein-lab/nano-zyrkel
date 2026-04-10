@@ -849,15 +849,44 @@ When used as part of the [Zyrkel](https://zyrkel.com) desktop agent system:
 
 ## Build from Source
 
+This repo is a Cargo workspace with two crates:
+
+- **`crates/core`** — `nano-zyrkel-core` library: config, fetchers, conditions,
+  notifiers, actions, runtime, and the `Plugin` trait that user repos use to
+  inject domain-specific behavior.
+- **`crates/cli`** — `nano-zyrkel` binary: a thin wrapper that parses CLI
+  arguments and calls `Runtime::run()` from the core library.
+
 ```bash
-cargo build --release              # Native binary (Linux/macOS/Windows)
+# Build everything
+cargo build --release
+
+# Build only the binary (skips library tests)
+cargo build --release -p nano-zyrkel
+
+# Run the binary against a config
+./target/release/nano-zyrkel --config hats/config.json
 ```
 
-For WASM targets (used by vusTracker, Helix):
+User repos that need custom domain logic should depend on the **library**
+rather than invoking the CLI:
 
-```bash
-cargo build --release --target wasm32-unknown-unknown --features wasm
+```toml
+# In your user repo's Cargo.toml
+[dependencies]
+nano-zyrkel-core = { git = "https://github.com/schlein-lab/nano-zyrkel", tag = "bin-v0.1.0" }
 ```
+
+Then implement the `Plugin` trait and register your plugin with `Runtime`
+before calling `run()`. See [docs/architecture.md](docs/architecture.md) for
+the full layered design.
+
+### Releases
+
+Pre-built binaries for Linux (x86_64, aarch64), macOS (Intel + Apple Silicon)
+and Windows are attached to every `bin-v*` GitHub Release. User repos can pull
+them directly via the update-core reusable workflow without needing a Rust
+toolchain on the runner.
 
 <details>
 <summary>Full config schema reference (click to expand)</summary>
