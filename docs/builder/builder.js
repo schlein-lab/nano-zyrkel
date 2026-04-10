@@ -1,338 +1,406 @@
-// nano-zyrkel SDK · Live Builder
-//
-// Single-page app that fetches the SDK template manifest from GitHub raw,
-// renders a form per template based on its declared slots, and produces a
-// downloadable zip of the materialised repo. Pure browser, no backend.
+/* ============================================
+   nano-zyrkel Builder — Logic
+   ============================================ */
 
-const RAW_BASE = "https://raw.githubusercontent.com/schlein-lab/nano-zyrkel/master";
-const TPL_BASE = `${RAW_BASE}/templates`;
+const wizard = {
+    step: 1,
+    data: {
+        url: '',
+        condition: '',
+        interval: 'daily',
+        silenceEnabled: false,
+        silenceFreq: 'daily',
+        email: ''
+    },
 
-const state = {
-  manifest: null,
-  currentKind: "scaffold",
-  currentTemplate: null,        // template.json contents
-  currentTemplateMeta: null,    // entry from manifest.json
-  fileCache: new Map(),         // raw template file -> body
-  generatedFiles: new Map(),    // output path -> rendered body
-  selectedFile: null,
+    /* ---- Navigation ---- */
+
+    goTo(step) {
+        if (step < 1 || step > 5) return;
+
+        // Leaving step 4? skip validation
+        if (step === 4) this.renderPreview();
+
+        const oldEl = document.querySelector('.wizard-step.active');
+        if (oldEl) oldEl.classList.remove('active');
+
+        const newEl = document.querySelector(`.wizard-step[data-step="${step}"]`);
+        if (newEl) {
+            newEl.classList.remove('active');
+            // Force reflow for animation
+            void newEl.offsetWidth;
+            newEl.classList.add('active');
+        }
+
+        this.step = step;
+        this.updateProgress();
+    },
+
+    next() {
+        if (!this.validate()) return;
+        this.saveCurrentStep();
+        this.goTo(this.step + 1);
+    },
+
+    prev() {
+        this.saveCurrentStep();
+        this.goTo(this.step - 1);
+    },
+
+    /* ---- Validation ---- */
+
+    validate() {
+        switch (this.step) {
+            case 1: {
+                const input = document.getElementById('inputUrl');
+                const val = input.value.trim();
+                if (!val) {
+                    this.shake(input);
+                    input.classList.add('error');
+                    return false;
+                }
+                // Basic URL check
+                try {
+                    new URL(val.startsWith('http') ? val : 'https://' + val);
+                } catch {
+                    this.shake(input);
+                    input.classList.add('error');
+                    return false;
+                }
+                input.classList.remove('error');
+                return true;
+            }
+            case 2: {
+                const input = document.getElementById('inputCondition');
+                if (!input.value.trim()) {
+                    this.shake(input);
+                    input.classList.add('error');
+                    return false;
+                }
+                input.classList.remove('error');
+                return true;
+            }
+            case 3: {
+                const input = document.getElementById('inputEmail');
+                const val = input.value.trim();
+                if (!val || !val.includes('@') || !val.includes('.')) {
+                    this.shake(input);
+                    input.classList.add('error');
+                    return false;
+                }
+                input.classList.remove('error');
+                return true;
+            }
+            default:
+                return true;
+        }
+    },
+
+    shake(el) {
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = 'shake 0.4s ease';
+        setTimeout(() => { el.style.animation = ''; }, 500);
+    },
+
+    /* ---- Save/Restore ---- */
+
+    saveCurrentStep() {
+        switch (this.step) {
+            case 1:
+                this.data.url = document.getElementById('inputUrl').value.trim();
+                if (this.data.url && !this.data.url.startsWith('http')) {
+                    this.data.url = 'https://' + this.data.url;
+                }
+                break;
+            case 2:
+                this.data.condition = document.getElementById('inputCondition').value.trim();
+                break;
+            case 3:
+                this.data.email = document.getElementById('inputEmail').value.trim();
+                this.data.silenceEnabled = document.getElementById('silenceToggle').checked;
+                break;
+        }
+    },
+
+    /* ---- Helpers ---- */
+
+    setCondition(btn) {
+        document.getElementById('inputCondition').value = btn.textContent;
+    },
+
+    setInterval(btn) {
+        document.querySelectorAll('.interval-card').forEach(c => c.classList.remove('selected'));
+        btn.classList.add('selected');
+        this.data.interval = btn.dataset.interval;
+    },
+
+    toggleSilence() {
+        const checked = document.getElementById('silenceToggle').checked;
+        this.data.silenceEnabled = checked;
+        document.getElementById('silenceOptions').classList.toggle('hidden', !checked);
+    },
+
+    setSilenceFreq(btn) {
+        document.querySelectorAll('.silence-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        this.data.silenceFreq = btn.dataset.freq;
+    },
+
+    /* ---- Progress ---- */
+
+    updateProgress() {
+        const fill = document.getElementById('progressFill');
+        const pct = this.step >= 5 ? 100 : (this.step / 4) * 100;
+        fill.style.width = pct + '%';
+
+        document.querySelectorAll('.step-indicator').forEach(ind => {
+            const s = parseInt(ind.dataset.step);
+            ind.classList.remove('active', 'done');
+            if (s === this.step && this.step <= 4) ind.classList.add('active');
+            else if (s < this.step) ind.classList.add('done');
+        });
+    },
+
+    /* ---- Interval Label ---- */
+
+    intervalLabel(key) {
+        const map = { hourly: 'Stuendlich', daily: 'Taeglich', weekly: 'Woechentlich' };
+        return map[key] || key;
+    },
+
+    silenceFreqLabel(key) {
+        const map = { daily: 'Taeglich', weekly: 'Woechentlich' };
+        return map[key] || key;
+    },
+
+    /* ---- Timestamp ---- */
+
+    now() {
+        const d = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    },
+
+    shortUrl(url) {
+        try {
+            const u = new URL(url);
+            let s = u.hostname + u.pathname;
+            if (s.length > 35) s = s.substring(0, 32) + '...';
+            return s;
+        } catch {
+            return url.length > 35 ? url.substring(0, 32) + '...' : url;
+        }
+    },
+
+    /* ---- Email Preview Render ---- */
+
+    renderPreview() {
+        this.saveCurrentStep();
+        const d = this.data;
+        const ts = this.now();
+
+        // Alert email
+        document.getElementById('alertPreview').innerHTML = `
+            <div class="email-body">
+                <div class="email-header">
+                    <span class="email-header-hex">\u2B21</span>
+                    <div class="email-header-text">
+                        <strong>nano-zyrkel</strong>
+                        Tracker-Benachrichtigung
+                    </div>
+                </div>
+                <div class="email-status alert">
+                    \uD83D\uDD14 Aenderung erkannt!
+                </div>
+                <div class="email-details">
+                    <div class="email-detail-row">
+                        <span class="email-detail-label">URL</span>
+                        <span class="email-detail-value">${this.esc(this.shortUrl(d.url))}</span>
+                    </div>
+                    <div class="email-detail-row">
+                        <span class="email-detail-label">Bedingung</span>
+                        <span class="email-detail-value">${this.esc(d.condition)}</span>
+                    </div>
+                    <div class="email-detail-row">
+                        <span class="email-detail-label">Erkannt am</span>
+                        <span class="email-detail-value">${ts}</span>
+                    </div>
+                    <div class="email-detail-row">
+                        <span class="email-detail-label">Intervall</span>
+                        <span class="email-detail-value">${this.intervalLabel(d.interval)}</span>
+                    </div>
+                </div>
+                <div class="email-message">
+                    Dein nano-zyrkel hat eine Aenderung auf der beobachteten Seite festgestellt. Die definierte Bedingung <strong>&bdquo;${this.esc(d.condition)}&ldquo;</strong> scheint eingetreten zu sein.
+                </div>
+                <div class="email-footer">
+                    Powered by <span class="email-footer-hex">\u2B21</span> nano-zyrkel
+                </div>
+            </div>
+        `;
+
+        // Silence email
+        document.getElementById('silencePreview').innerHTML = `
+            <div class="email-body">
+                <div class="email-header">
+                    <span class="email-header-hex">\u2B21</span>
+                    <div class="email-header-text">
+                        <strong>nano-zyrkel</strong>
+                        Status-Bericht
+                    </div>
+                </div>
+                <div class="email-status ok">
+                    \u2705 Keine Aenderung
+                </div>
+                <div class="email-details">
+                    <div class="email-detail-row">
+                        <span class="email-detail-label">URL</span>
+                        <span class="email-detail-value">${this.esc(this.shortUrl(d.url))}</span>
+                    </div>
+                    <div class="email-detail-row">
+                        <span class="email-detail-label">Bedingung</span>
+                        <span class="email-detail-value">${this.esc(d.condition)}</span>
+                    </div>
+                    <div class="email-detail-row">
+                        <span class="email-detail-label">Geprueft am</span>
+                        <span class="email-detail-value">${ts}</span>
+                    </div>
+                    <div class="email-detail-row">
+                        <span class="email-detail-label">Naechste Pruefung</span>
+                        <span class="email-detail-value">${this.intervalLabel(d.interval)}</span>
+                    </div>
+                </div>
+                <div class="email-message">
+                    Dein nano-zyrkel laeuft einwandfrei. Die Bedingung <strong>&bdquo;${this.esc(d.condition)}&ldquo;</strong> ist bisher nicht eingetreten. Der Tracker beobachtet die Seite weiterhin.
+                </div>
+                <div class="email-footer">
+                    Powered by <span class="email-footer-hex">\u2B21</span> nano-zyrkel
+                </div>
+            </div>
+        `;
+
+        // Summary
+        document.getElementById('summaryBox').innerHTML = `
+            <div class="summary-row">
+                <span class="summary-label">Ziel-URL</span>
+                <span class="summary-value">${this.esc(this.shortUrl(d.url))}</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Bedingung</span>
+                <span class="summary-value">${this.esc(d.condition)}</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Pruef-Intervall</span>
+                <span class="summary-value">${this.intervalLabel(d.interval)}</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Stille-Bestaetigung</span>
+                <span class="summary-value">${d.silenceEnabled ? this.silenceFreqLabel(d.silenceFreq) : 'Aus'}</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">E-Mail</span>
+                <span class="summary-value">${this.esc(d.email)}</span>
+            </div>
+        `;
+    },
+
+    esc(s) {
+        const div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+    },
+
+    /* ---- Create ---- */
+
+    create() {
+        const btn = document.getElementById('btnCreate');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-hex">\u2B21</span> Wird erstellt...';
+
+        // Simulate creation delay
+        setTimeout(() => {
+            const d = this.data;
+            document.getElementById('successDetails').innerHTML = `
+                <div class="success-row">
+                    <span class="success-label">URL</span>
+                    <span class="success-value">${this.esc(this.shortUrl(d.url))}</span>
+                </div>
+                <div class="success-row">
+                    <span class="success-label">Bedingung</span>
+                    <span class="success-value">${this.esc(d.condition)}</span>
+                </div>
+                <div class="success-row">
+                    <span class="success-label">Intervall</span>
+                    <span class="success-value">${this.intervalLabel(d.interval)}</span>
+                </div>
+                <div class="success-row">
+                    <span class="success-label">E-Mail</span>
+                    <span class="success-value">${this.esc(d.email)}</span>
+                </div>
+            `;
+
+            btn.disabled = false;
+            btn.innerHTML = '<span class="btn-hex">\u2B21</span> Nano-Zyrkel erstellen';
+            this.goTo(5);
+        }, 1200);
+    },
+
+    /* ---- Reset ---- */
+
+    reset() {
+        this.data = {
+            url: '',
+            condition: '',
+            interval: 'daily',
+            silenceEnabled: false,
+            silenceFreq: 'daily',
+            email: ''
+        };
+        document.getElementById('inputUrl').value = '';
+        document.getElementById('inputCondition').value = '';
+        document.getElementById('inputEmail').value = '';
+        document.getElementById('silenceToggle').checked = false;
+        document.getElementById('silenceOptions').classList.add('hidden');
+        document.querySelectorAll('.interval-card').forEach(c => c.classList.remove('selected'));
+        document.querySelector('.interval-card[data-interval="daily"]').classList.add('selected');
+        document.querySelectorAll('.silence-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelector('.silence-btn[data-freq="daily"]').classList.add('selected');
+        this.goTo(1);
+    }
 };
 
-const els = {
-  status: document.getElementById("status"),
-  list: document.getElementById("template-list"),
-  tabs: document.querySelectorAll(".kind-tab"),
-  formEmpty: document.getElementById("form-empty"),
-  formHost: document.getElementById("form-host"),
-  tplName: document.getElementById("tpl-name"),
-  tplDescription: document.getElementById("tpl-description"),
-  tplTags: document.getElementById("tpl-tags"),
-  tplRequires: document.getElementById("tpl-requires"),
-  slotsForm: document.getElementById("slots-form"),
-  btnPreview: document.getElementById("btn-preview"),
-  btnDownload: document.getElementById("btn-download"),
-  preview: document.getElementById("preview"),
-  previewCount: document.getElementById("preview-count"),
-  fileList: document.getElementById("file-list"),
-  fileContent: document.getElementById("file-content").querySelector("code"),
-};
+/* ---- Init ---- */
 
-function setStatus(text, kind = "") {
-  els.status.textContent = text;
-  els.status.className = "status" + (kind ? " " + kind : "");
-}
+document.addEventListener('DOMContentLoaded', () => {
+    wizard.updateProgress();
 
-async function fetchJson(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`${r.status} ${url}`);
-  return r.json();
-}
-
-async function fetchText(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`${r.status} ${url}`);
-  return r.text();
-}
-
-async function loadManifest() {
-  setStatus("loading manifest…");
-  try {
-    state.manifest = await fetchJson(`${TPL_BASE}/manifest.json`);
-    setStatus(`v${state.manifest.version}`, "ok");
-    renderList();
-  } catch (e) {
-    setStatus("manifest load failed", "error");
-    console.error(e);
-  }
-}
-
-function entriesForKind(kind) {
-  if (!state.manifest) return [];
-  if (kind === "scaffold") return state.manifest.scaffolds || [];
-  if (kind === "theme") return state.manifest.themes || [];
-  if (kind === "example") return state.manifest.examples || [];
-  return [];
-}
-
-function renderList() {
-  const entries = entriesForKind(state.currentKind);
-  els.list.innerHTML = "";
-  for (const entry of entries) {
-    const li = document.createElement("li");
-    li.dataset.id = entry.id;
-    li.innerHTML = `
-      <span class="tpl-name">${entry.id}</span>
-      <span class="tpl-meta">${entry.path}</span>
-    `;
-    li.addEventListener("click", () => selectTemplate(entry));
-    els.list.appendChild(li);
-  }
-}
-
-async function selectTemplate(entry) {
-  setStatus(`loading ${entry.id}…`);
-  try {
-    const tpl = await fetchJson(`${TPL_BASE}/${entry.manifest.replace(/^templates\//, "")}`);
-    state.currentTemplate = tpl;
-    state.currentTemplateMeta = entry;
-    state.fileCache.clear();
-    state.generatedFiles.clear();
-    state.selectedFile = null;
-    renderForm();
-    setStatus(`ready: ${entry.id}`, "ok");
-
-    document.querySelectorAll("#template-list li").forEach(li => {
-      li.classList.toggle("active", li.dataset.id === entry.id);
+    // Remove error class on input
+    document.querySelectorAll('.input-group input').forEach(input => {
+        input.addEventListener('input', () => input.classList.remove('error'));
     });
-  } catch (e) {
-    setStatus(`failed: ${entry.id}`, "error");
-    console.error(e);
-  }
-}
 
-function renderForm() {
-  const tpl = state.currentTemplate;
-  els.formEmpty.hidden = true;
-  els.formHost.hidden = false;
-  els.preview.hidden = true;
-
-  els.tplName.textContent = tpl.name || tpl.id;
-  els.tplDescription.textContent = tpl.description || "";
-
-  els.tplTags.innerHTML = "";
-  for (const tag of tpl.tags || []) {
-    const li = document.createElement("li");
-    li.textContent = tag;
-    els.tplTags.appendChild(li);
-  }
-
-  els.tplRequires.innerHTML = "";
-  if (tpl.requires) {
-    for (const [k, v] of Object.entries(tpl.requires)) {
-      const div = document.createElement("div");
-      div.textContent = `${k}: ${Array.isArray(v) ? v.join(", ") : v}`;
-      els.tplRequires.appendChild(div);
-    }
-  }
-
-  els.slotsForm.innerHTML = "";
-  for (const slot of tpl.slots || []) {
-    els.slotsForm.appendChild(renderSlot(slot));
-  }
-}
-
-function renderSlot(slot) {
-  const wrap = document.createElement("div");
-  wrap.className = "slot" + (slot.kind === "boolean" ? " checkbox" : "");
-
-  const label = document.createElement("label");
-  label.htmlFor = `slot-${slot.name}`;
-  label.innerHTML = `${slot.label || slot.name}${slot.required ? ' <span class="req">required</span>' : ""}`;
-
-  let input;
-  switch (slot.kind) {
-    case "multiline":
-      input = document.createElement("textarea");
-      input.value = slot.default ?? "";
-      break;
-    case "enum":
-      input = document.createElement("select");
-      for (const opt of slot.options || []) {
-        const o = document.createElement("option");
-        o.value = typeof opt === "string" ? opt : opt.value;
-        o.textContent = typeof opt === "string" ? opt : (opt.label || opt.value);
-        if (o.value === slot.default) o.selected = true;
-        input.appendChild(o);
-      }
-      break;
-    case "boolean":
-      input = document.createElement("input");
-      input.type = "checkbox";
-      input.checked = !!slot.default;
-      break;
-    case "number":
-      input = document.createElement("input");
-      input.type = "number";
-      input.value = slot.default ?? "";
-      break;
-    case "color":
-      input = document.createElement("input");
-      input.type = "color";
-      input.value = slot.default || "#8B5CF6";
-      break;
-    case "url":
-      input = document.createElement("input");
-      input.type = "url";
-      input.value = slot.default ?? "";
-      input.placeholder = "https://…";
-      break;
-    case "slug":
-    case "string":
-    default:
-      input = document.createElement("input");
-      input.type = "text";
-      input.value = slot.default ?? "";
-      if (slot.kind === "slug") input.pattern = "[a-z0-9-]+";
-      break;
-  }
-  input.id = `slot-${slot.name}`;
-  input.name = slot.name;
-  if (slot.required) input.required = true;
-
-  wrap.appendChild(label);
-  wrap.appendChild(input);
-
-  if (slot.help) {
-    const help = document.createElement("div");
-    help.className = "help";
-    help.textContent = slot.help;
-    wrap.appendChild(help);
-  }
-  return wrap;
-}
-
-function collectSlotValues() {
-  const values = {};
-  for (const slot of state.currentTemplate.slots || []) {
-    const el = document.getElementById(`slot-${slot.name}`);
-    if (!el) continue;
-    if (slot.kind === "boolean") values[slot.name] = el.checked ? "true" : "false";
-    else values[slot.name] = el.value;
-  }
-  return values;
-}
-
-function substitute(text, values) {
-  return text.replace(/\{\{([A-Z_][A-Z0-9_]*)\}\}/g, (_, key) => {
-    return key in values ? values[key] : `{{${key}}}`;
-  });
-}
-
-async function materialise() {
-  const tpl = state.currentTemplate;
-  const meta = state.currentTemplateMeta;
-  const values = collectSlotValues();
-
-  state.generatedFiles.clear();
-
-  // Always include the template.json itself for traceability.
-  const files = tpl.files || [];
-
-  for (const relPath of files) {
-    const url = `${TPL_BASE}/${meta.path.replace(/^templates\//, "")}/${relPath}`;
-    let body;
-    if (state.fileCache.has(url)) {
-      body = state.fileCache.get(url);
-    } else {
-      try {
-        body = await fetchText(url);
-        state.fileCache.set(url, body);
-      } catch (e) {
-        body = `// missing in template: ${relPath}\n// ${e.message}`;
-      }
-    }
-    state.generatedFiles.set(relPath, substitute(body, values));
-  }
-
-  // Include a minimal README pointer if not already present.
-  if (!state.generatedFiles.has("README.md")) {
-    const slug = values.NANO_ID || tpl.id;
-    state.generatedFiles.set("README.md", `# ${slug}\n\nGenerated with the nano-zyrkel SDK live builder from \`${meta.id}\`.\n`);
-  }
-
-  return state.generatedFiles;
-}
-
-async function onPreview() {
-  setStatus("materialising…");
-  try {
-    await materialise();
-    renderPreview();
-    setStatus(`${state.generatedFiles.size} files ready`, "ok");
-  } catch (e) {
-    setStatus("preview failed", "error");
-    console.error(e);
-  }
-}
-
-function renderPreview() {
-  els.preview.hidden = false;
-  els.previewCount.textContent = `${state.generatedFiles.size} files`;
-  els.fileList.innerHTML = "";
-
-  const paths = [...state.generatedFiles.keys()].sort();
-  for (const path of paths) {
-    const li = document.createElement("li");
-    li.textContent = path;
-    li.dataset.path = path;
-    li.addEventListener("click", () => selectFile(path));
-    els.fileList.appendChild(li);
-  }
-
-  if (paths.length > 0) selectFile(paths[0]);
-}
-
-function selectFile(path) {
-  state.selectedFile = path;
-  els.fileContent.textContent = state.generatedFiles.get(path) || "";
-  document.querySelectorAll("#file-list li").forEach(li => {
-    li.classList.toggle("active", li.dataset.path === path);
-  });
-}
-
-async function onDownload() {
-  setStatus("packaging zip…");
-  try {
-    if (state.generatedFiles.size === 0) await materialise();
-    const zip = new JSZip();
-    const slug = collectSlotValues().NANO_ID || state.currentTemplate.id;
-    const root = zip.folder(slug);
-    for (const [path, body] of state.generatedFiles) {
-      root.file(path, body);
-    }
-    const blob = await zip.generateAsync({ type: "blob" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${slug}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(a.href);
-    setStatus(`downloaded ${slug}.zip`, "ok");
-  } catch (e) {
-    setStatus("download failed", "error");
-    console.error(e);
-  }
-}
-
-// Wire up
-els.tabs.forEach(tab => {
-  tab.addEventListener("click", () => {
-    state.currentKind = tab.dataset.kind;
-    els.tabs.forEach(t => t.classList.toggle("active", t === tab));
-    renderList();
-  });
+    // Enter key advances
+    document.querySelectorAll('.input-group input').forEach(input => {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                wizard.next();
+            }
+        });
+    });
 });
-els.btnPreview.addEventListener("click", onPreview);
-els.btnDownload.addEventListener("click", onDownload);
 
-loadManifest();
+/* ---- Shake animation (injected) ---- */
+
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = `
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+`;
+document.head.appendChild(shakeStyle);
