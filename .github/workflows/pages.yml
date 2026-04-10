@@ -12,7 +12,7 @@ name: Publish SDK site
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "docs/**"
       - "templates/**"
