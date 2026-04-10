@@ -1,0 +1,45 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "scaffold-showcase",
+  "kind": "scaffold",
+  "name": "Showcase / portal",
+  "description": "Pure browser-side app, no binary. Reads a list of widgets from hats/config.json and renders one card per entry. Use it for landing pages and portals.",
+  "tags": ["wasm", "static", "github-pages", "portal"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data", "config"]
+  },
+  "slots": [
+    {
+      "name": "NANO_ID",
+      "label": "Nano ID",
+      "kind": "slug",
+      "default": "my-portal",
+      "required": true
+    },
+    {
+      "name": "DESCRIPTION",
+      "label": "Short description",
+      "kind": "string",
+      "default": "What this portal showcases",
+      "required": true
+    },
+    {
+      "name": "BRANDING_COLOR",
+      "label": "Brand color",
+      "kind": "color",
+      "default": "#8B5CF6",
+      "required": false
+    }
+  ],
+  "files": [
+    "hats/config.json",
+    ".nano-zyrkel-versions.json",
+    ".github/workflows/deploy.yml",
+    ".github/workflows/update-core.yml",
+    "docs/index.html",
+    "docs/style.css",
+    "docs/app.js",
+    "README.md"
+  ]
+}

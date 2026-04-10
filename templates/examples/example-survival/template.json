@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-survival",
+  "kind": "example",
+  "name": "Kaplan-Meier survival",
+  "description": "Step-function survival curve. Reads (time, event) records, computes the Kaplan-Meier estimator on the client and renders it through a LineChart.",
+  "tags": ["survival", "kaplan-meier", "stats", "line-chart"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data", "viz-basic"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

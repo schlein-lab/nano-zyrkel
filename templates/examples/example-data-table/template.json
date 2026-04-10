@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-data-table",
+  "kind": "example",
+  "name": "Data table",
+  "description": "Sortable table with filter chips and live search powered by SearchIndex + Filter.",
+  "tags": ["table", "search", "filter", "sort"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

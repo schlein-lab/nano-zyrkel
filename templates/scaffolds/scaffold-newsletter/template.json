@@ -1,0 +1,46 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "scaffold-newsletter",
+  "kind": "scaffold",
+  "name": "Newsletter / digest",
+  "description": "Weekly literature digest. Cron binary aggregates fresh items into a Markdown issue and emails it via SMTP, while a static GitHub Pages site renders the latest issue plus an archive.",
+  "tags": ["binary", "wasm", "newsletter", "literature", "email", "markdown"],
+  "requires": {
+    "binary": ">=0.2.0",
+    "wasm": ">=0.2.0",
+    "wasm_features": ["data", "config", "viz-ui"]
+  },
+  "slots": [
+    {
+      "name": "NANO_ID",
+      "label": "Nano ID",
+      "kind": "slug",
+      "default": "my-digest",
+      "required": true
+    },
+    {
+      "name": "DESCRIPTION",
+      "label": "Short description",
+      "kind": "string",
+      "default": "Weekly literature digest",
+      "required": true
+    },
+    {
+      "name": "BRAND_COLOR",
+      "label": "Accent color",
+      "kind": "color",
+      "default": "#1D4ED8"
+    }
+  ],
+  "files": [
+    "hats/config.json",
+    ".nano-zyrkel-versions.json",
+    ".github/workflows/digest.yml",
+    ".github/workflows/deploy.yml",
+    ".github/workflows/update-core.yml",
+    "docs/index.html",
+    "docs/style.css",
+    "docs/app.js",
+    "README.md"
+  ]
+}

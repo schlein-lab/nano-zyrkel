@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-comparison",
+  "kind": "example",
+  "name": "Side-by-side comparison",
+  "description": "Two LineCharts with synchronized hover. The classic 'before vs after' / A vs B view.",
+  "tags": ["comparison", "line-chart", "sync-hover"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data", "viz-basic"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

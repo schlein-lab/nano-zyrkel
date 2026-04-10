@@ -1,0 +1,21 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "theme-multipage",
+  "kind": "theme",
+  "name": "Multipage",
+  "description": "Sidebar + main pane layout for nano-zyrkels with multiple sections. Pairs with the wasm-core Router for hash-based navigation.",
+  "tags": ["light", "sidebar", "multi-section", "router"],
+  "requires": {
+    "wasm": ">=0.2.0",
+    "wasm_features": ["data"]
+  },
+  "slots": [
+    {
+      "name": "BRAND",
+      "label": "Brand color",
+      "kind": "color",
+      "default": "#8B5CF6"
+    }
+  ],
+  "files": ["docs/index.html", "docs/style.css", "README.md"]
+}

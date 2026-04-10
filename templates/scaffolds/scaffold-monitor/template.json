@@ -1,0 +1,53 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "scaffold-monitor",
+  "kind": "scaffold",
+  "name": "Monitor / status page",
+  "description": "Heartbeat-style nano-zyrkel: cron binary checks an upstream URL or feed every 15 minutes, surfaces a STATUS / STALE state plus a recent-events table on a static GitHub Pages site.",
+  "tags": ["binary", "wasm", "monitoring", "heartbeat", "status"],
+  "requires": {
+    "binary": ">=0.2.0",
+    "wasm": ">=0.2.0",
+    "wasm_features": ["data", "config"]
+  },
+  "slots": [
+    {
+      "name": "NANO_ID",
+      "label": "Nano ID",
+      "kind": "slug",
+      "default": "my-monitor",
+      "required": true
+    },
+    {
+      "name": "DESCRIPTION",
+      "label": "Short description",
+      "kind": "string",
+      "default": "Uptime and freshness monitor",
+      "required": true
+    },
+    {
+      "name": "TARGET_URL",
+      "label": "Upstream URL to monitor",
+      "kind": "url",
+      "default": "https://api.example.com/health",
+      "required": true
+    },
+    {
+      "name": "BRAND_COLOR",
+      "label": "Brand color",
+      "kind": "color",
+      "default": "#06B6D4"
+    }
+  ],
+  "files": [
+    "hats/config.json",
+    ".nano-zyrkel-versions.json",
+    ".github/workflows/heartbeat.yml",
+    ".github/workflows/deploy.yml",
+    ".github/workflows/update-core.yml",
+    "docs/index.html",
+    "docs/style.css",
+    "docs/app.js",
+    "README.md"
+  ]
+}

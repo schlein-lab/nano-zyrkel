@@ -1,0 +1,30 @@
+{
+  "schema": "1",
+  "id": "{{NANO_ID}}",
+  "type": "watcher",
+  "lang": "en",
+  "description": "{{DESCRIPTION}}",
+
+  "branding": {
+    "color": "{{BRAND_COLOR}}"
+  },
+
+  "source": {
+    "url": "{{TARGET_URL}}",
+    "method": "GET"
+  },
+
+  "condition": {
+    "type": "stale",
+    "max_age_hours": 24,
+    "date_field": "updated_at"
+  },
+
+  "notify": {
+    "telegram": false,
+    "discord": false,
+    "slack": false
+  },
+
+  "output_dir": "staging"
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "scaffold-interactive-app",
+  "kind": "scaffold",
+  "name": "Interactive app",
+  "description": "Cron binary plus a browser dashboard built on the WASM core. The typical case for any nano-zyrkel that has both a server-side pipeline and a UI.",
+  "tags": ["binary", "wasm", "dashboard", "github-pages", "viz-basic"],
+  "requires": {
+    "binary": ">=0.1.0",
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data", "config", "viz-basic"]
+  },
+  "slots": [
+    {
+      "name": "NANO_ID",
+      "label": "Nano ID",
+      "kind": "slug",
+      "default": "my-app",
+      "required": true,
+      "help": "Slug used in repo name, headers and the dashboard."
+    },
+    {
+      "name": "DESCRIPTION",
+      "label": "Short description",
+      "kind": "string",
+      "default": "What this app shows",
+      "required": true
+    },
+    {
+      "name": "BRANDING_COLOR",
+      "label": "Brand color",
+      "kind": "color",
+      "default": "#8B5CF6",
+      "required": false,
+      "help": "Primary accent used by the bundled themes and the chart kit."
+    }
+  ],
+  "files": [
+    "hats/config.json",
+    ".nano-zyrkel-versions.json",
+    ".github/workflows/data-update.yml",
+    ".github/workflows/deploy.yml",
+    ".github/workflows/update-core.yml",
+    "docs/index.html",
+    "docs/style.css",
+    "docs/app.js",
+    "crates/plugin/Cargo.toml",
+    "crates/plugin/src/lib.rs",
+    "README.md"
+  ]
+}

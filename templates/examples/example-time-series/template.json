@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-time-series",
+  "kind": "example",
+  "name": "Time series",
+  "description": "Single-series LineChart with Y grid, X axis labels and a tooltip on hover.",
+  "tags": ["line-chart", "time", "axis", "tooltip"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data", "viz-basic"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-plugin",
+  "kind": "example",
+  "name": "Custom plugin",
+  "description": "Worked example of the Plugin trait. A small CLI that registers a score-filter plugin against the central Runtime and demonstrates every lifecycle hook (on_init, on_record, on_pre_action, on_finish).",
+  "tags": ["plugin", "rust", "binary", "advanced"],
+  "requires": {
+    "binary": ">=0.1.0"
+  },
+  "slots": [],
+  "files": [
+    "Cargo.toml",
+    "src/main.rs",
+    "README.md"
+  ]
+}

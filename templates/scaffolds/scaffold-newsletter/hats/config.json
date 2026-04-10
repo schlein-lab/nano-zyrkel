@@ -1,0 +1,23 @@
+{
+  "schema": "1",
+  "id": "{{NANO_ID}}",
+  "type": "literature_alert",
+  "lang": "en",
+  "description": "{{DESCRIPTION}}",
+
+  "branding": {
+    "color": "{{BRAND_COLOR}}"
+  },
+
+  "literature": {
+    "topics": ["example topic 1", "example topic 2"],
+    "sources": ["pubmed", "biorxiv", "medrxiv", "crossref"],
+    "max_per_run": 50
+  },
+
+  "notify": {
+    "email": true
+  },
+
+  "output_dir": "staging"
+}

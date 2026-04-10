@@ -1,0 +1,24 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "theme-cinematic",
+  "kind": "theme",
+  "name": "Cinematic",
+  "description": "Dark, ambient gradient background, gradient-text headlines. Built for showcase / portal nano-zyrkels and demo pages.",
+  "tags": ["dark", "showcase", "portal", "gradient"],
+  "requires": {},
+  "slots": [
+    {
+      "name": "BRAND",
+      "label": "Primary accent",
+      "kind": "color",
+      "default": "#8B5CF6"
+    },
+    {
+      "name": "ACCENT",
+      "label": "Secondary accent",
+      "kind": "color",
+      "default": "#06B6D4"
+    }
+  ],
+  "files": ["docs/index.html", "docs/style.css", "README.md"]
+}

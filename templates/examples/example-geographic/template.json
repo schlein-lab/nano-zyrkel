@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-geographic",
+  "kind": "example",
+  "name": "Geographic",
+  "description": "Country-level WorldMap choropleth fed by a custom polygon shapes file plus a value map.",
+  "tags": ["map", "choropleth", "geo", "world"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data", "viz-basic", "viz-spatial"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

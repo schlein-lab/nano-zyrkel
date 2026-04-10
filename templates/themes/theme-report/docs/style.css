@@ -1,0 +1,121 @@
+/* nano-zyrkel theme: report
+ *
+ * Print-friendly A4 / Letter layout for nano-zyrkels that produce
+ * static reports. Use it for newsletter outputs, weekly digests,
+ * literature alerts and anything else that ends up being printed
+ * or saved as PDF from the browser.
+ *
+ * Screen rendering keeps a paper-like centered column. The print
+ * stylesheet hides interactive chrome, removes shadows and links,
+ * and respects page breaks.
+ */
+
+:root {
+  --paper: #FFFFFF;
+  --rule: #1F2937;
+  --text: #111827;
+  --muted: #4B5563;
+  --accent: #1D4ED8;
+  --max-w: 760px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #F3F4F6;
+  color: var(--text);
+  font-family: 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+  font-size: 11pt;
+  line-height: 1.65;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+main {
+  background: var(--paper);
+  max-width: var(--max-w);
+  margin: 24px auto;
+  padding: 48px 56px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+}
+
+header {
+  border-bottom: 2px solid var(--rule);
+  padding-bottom: 16px;
+  margin-bottom: 32px;
+}
+
+header h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28pt;
+  font-weight: 700;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+header .meta {
+  color: var(--muted);
+  font-size: 9.5pt;
+  font-family: 'Inter', sans-serif;
+}
+
+h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 16pt;
+  font-weight: 700;
+  margin: 28px 0 8px;
+}
+
+p { margin: 0 0 12px; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10pt;
+  margin: 12px 0 24px;
+}
+
+th, td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+th {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 8.5pt;
+}
+
+footer {
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  font-family: 'Inter', sans-serif;
+  font-size: 9pt;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media print {
+  html, body { background: var(--paper); }
+  main {
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  a { color: var(--text); text-decoration: none; }
+  header, h2 { page-break-after: avoid; }
+  table { page-break-inside: avoid; }
+}
+
+@page {
+  size: A4;
+  margin: 18mm 20mm;
+}

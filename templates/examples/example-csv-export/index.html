@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!--
+  Example: CSV export
+  -------------------
+  Renders a small data table and exposes a "Download as CSV" button
+  backed by Csv.fromJsonArray + Csv.download from the wasm-core data
+  layer. The CSV is generated entirely on the client; no server hop.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — CSV export</title>
+<style>
+  body { font: 14px/1.55 'Inter', system-ui, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+  th, td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #E5E7EB; text-align: left; font-size: 0.875rem; }
+  button { padding: 0.5rem 1rem; border-radius: 8px; border: none; background: #8B5CF6; color: white; font: inherit; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>CSV export</h1>
+
+<button id="export">Download CSV</button>
+
+<table>
+  <thead><tr><th>Gene</th><th>Score</th><th>Classification</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+
+<script type="module">
+import init, {
+  install_panic_hook, Csv,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+const data = [
+  { gene: 'BRCA1', score: 0.92, classification: 'Pathogenic' },
+  { gene: 'BRCA2', score: 0.41, classification: 'VUS' },
+  { gene: 'TP53',  score: 0.88, classification: 'Pathogenic' },
+  { gene: 'MLH1',  score: 0.31, classification: 'VUS' },
+  { gene: 'MSH2',  score: 0.65, classification: 'Likely Pathogenic' },
+];
+
+document.getElementById('rows').innerHTML = data.map(r => `
+  <tr><td>${r.gene}</td><td>${r.score}</td><td>${r.classification}</td></tr>
+`).join('');
+
+document.getElementById('export').addEventListener('click', () => {
+  const body = Csv.fromJsonArray(data);
+  Csv.download('variants.csv', body);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--
+  Example: Multi-tab view
+  -----------------------
+  Mounts a tab strip + content panel with the wasm-core Tabs widget.
+  Each tab gets its own HTML body. The same pattern works for any
+  multi-section dashboard.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Multi-tab</title>
+<style>
+  body { font: 14px/1.55 'Inter', system-ui, sans-serif; padding: 2rem; max-width: 900px; margin: 0 auto; }
+  .card { border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; }
+  .nz-tabs-strip button { background: transparent; border: none; padding: 0.5rem 0.75rem; cursor: pointer; font: inherit; color: #6B7280; }
+  .nz-tabs-strip button.active { color: #111827; border-bottom: 2px solid #8B5CF6; }
+</style>
+</head>
+<body>
+<h1>Multi-tab</h1>
+
+<div class="card" id="tabs"></div>
+
+<script type="module">
+import init, {
+  install_panic_hook, Tabs,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+Tabs.mount('#tabs', [
+  { id: 'overview', label: 'Overview', html: '<h2>Overview</h2><p>Top-level summary lives here.</p>' },
+  { id: 'details',  label: 'Details',  html: '<h2>Details</h2><p>Field-by-field breakdown.</p>' },
+  { id: 'history',  label: 'History',  html: '<h2>History</h2><p>Audit trail of recent runs.</p>' },
+  { id: 'config',   label: 'Config',   html: '<h2>Config</h2><pre>{"id":"demo","type":"watcher"}</pre>' },
+]);
+</script>
+</body>
+</html>

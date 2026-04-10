@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+  Example: Side-by-side comparison
+  --------------------------------
+  Two LineCharts with synchronized hover. Useful for "before vs after"
+  views, A/B comparisons or two-population overlays. Hovering over
+  one chart highlights the same X position on the other.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Comparison</title>
+<style>
+  body { font: 14px/1.55 'Inter', system-ui, sans-serif; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  .grid { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+  .card { border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; position: relative; }
+  .card h2 { font-size: 0.875rem; margin: 0 0 0.5rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; }
+  .crosshair { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(139,92,246,0.6); pointer-events: none; display: none; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>Side-by-side comparison</h1>
+
+<div class="grid">
+  <div class="card"><h2>Before</h2><canvas id="chart-a"></canvas><div class="crosshair" id="ch-a"></div></div>
+  <div class="card"><h2>After</h2><canvas id="chart-b"></canvas><div class="crosshair" id="ch-b"></div></div>
+</div>
+
+<script type="module">
+import init, {
+  install_panic_hook,
+  ChartCanvas, Padding, Scale, draw_y_grid, LineChart, Format,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+const before = Array.from({ length: 30 }, (_, i) => ({ x: i, y: 10 + Math.sin(i / 4) * 4 + i * 0.3 }));
+const after  = Array.from({ length: 30 }, (_, i) => ({ x: i, y: 12 + Math.sin(i / 4 + 0.5) * 6 + i * 0.5 }));
+
+const padding = new Padding(36, 12, 12, 24);
+const a = new ChartCanvas(document.getElementById('chart-a'), 200, padding);
+const b = new ChartCanvas(document.getElementById('chart-b'), 200, padding);
+
+for (const [chart, data, color] of [[a, before, '#06B6D4'], [b, after, '#8B5CF6']]) {
+  const xs = Scale.linear(0, 29, chart.plotLeft(), chart.plotLeft() + chart.plotWidth());
+  const ys = Scale.linear(0, 25, chart.plotTop() + chart.plotHeight(), chart.plotTop());
+  draw_y_grid(chart, ys, 5, v => Format.fixed(v, 0));
+  new LineChart(chart).x(xs).y(ys).data(data).stroke(color, 2).draw();
+}
+
+const ca = document.getElementById('chart-a');
+const cb = document.getElementById('chart-b');
+const cha = document.getElementById('ch-a');
+const chb = document.getElementById('ch-b');
+
+function syncFrom(canvas, fromCh, otherCh) {
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    fromCh.style.left = `${x + 16}px`; // align over canvas inside .card padding
+    otherCh.style.left = `${x + 16}px`;
+    fromCh.style.display = 'block';
+    otherCh.style.display = 'block';
+  });
+  canvas.addEventListener('mouseleave', () => {
+    fromCh.style.display = 'none';
+    otherCh.style.display = 'none';
+  });
+}
+syncFrom(ca, cha, chb);
+syncFrom(cb, chb, cha);
+</script>
+</body>
+</html>

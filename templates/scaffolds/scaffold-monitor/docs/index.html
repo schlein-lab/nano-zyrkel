@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{NANO_ID}} — status</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>{{NANO_ID}}</h1>
+    <p class="subtitle">{{DESCRIPTION}}</p>
+  </header>
+
+  <section class="status-grid">
+    <div class="card status-card" id="status-current">
+      <div class="status-label">Current state</div>
+      <div class="status-value">checking…</div>
+    </div>
+    <div class="card status-card" id="status-checked">
+      <div class="status-label">Last checked</div>
+      <div class="status-value">—</div>
+    </div>
+    <div class="card status-card" id="status-uptime">
+      <div class="status-label">Uptime (24h)</div>
+      <div class="status-value">—</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Recent events</h2>
+    <table>
+      <thead><tr><th>When</th><th>State</th><th>Detail</th></tr></thead>
+      <tbody id="events"></tbody>
+    </table>
+  </section>
+
+  <footer>powered by <a href="https://github.com/schlein-lab/nano-zyrkel">nano-zyrkel</a></footer>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

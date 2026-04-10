@@ -1,0 +1,58 @@
+/* scaffold-monitor — status page default styles. Replace with
+ * theme-dashboard for the dark / monitoring look. */
+:root {
+  --bg: #FFFFFF;
+  --card: #F9FAFB;
+  --border: #E5E7EB;
+  --text: #111827;
+  --muted: #6B7280;
+  --good: #16A34A;
+  --warn: #F59E0B;
+  --bad: #DC2626;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.55 'Inter', system-ui, sans-serif;
+}
+main { max-width: 1080px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+header h1 { font-size: 1.75rem; margin: 0 0 0.25rem; }
+.subtitle { color: var(--muted); margin: 0 0 1.5rem; }
+.status-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 1.5rem;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+.status-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.status-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+.status-value.good { color: var(--good); }
+.status-value.warn { color: var(--warn); }
+.status-value.bad  { color: var(--bad); }
+table { width: 100%; border-collapse: collapse; }
+th, td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 0.875rem;
+}
+th { background: rgba(0,0,0,0.02); font-weight: 600; }
+footer { margin-top: 3rem; font-size: 0.8125rem; color: var(--muted); text-align: center; }

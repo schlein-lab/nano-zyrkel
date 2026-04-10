@@ -1,0 +1,43 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "scaffold-data-pipeline",
+  "kind": "scaffold",
+  "name": "Data pipeline",
+  "description": "Cron-driven binary that fetches data, evaluates a condition and notifies on match. No browser side, no WASM.",
+  "tags": ["binary", "cron", "telegram", "watcher", "tracker"],
+  "requires": {
+    "binary": ">=0.1.0"
+  },
+  "slots": [
+    {
+      "name": "NANO_ID",
+      "label": "Nano ID",
+      "kind": "slug",
+      "default": "my-tracker",
+      "required": true,
+      "help": "Slug used in repository name and notifications."
+    },
+    {
+      "name": "DESCRIPTION",
+      "label": "Short description",
+      "kind": "string",
+      "default": "What this tracker watches",
+      "required": true
+    },
+    {
+      "name": "SOURCE_URL",
+      "label": "Source URL",
+      "kind": "url",
+      "default": "https://example.com/feed.json",
+      "required": true,
+      "help": "Initial fetch target. Edit hats/config.json afterwards for richer condition / action chains."
+    }
+  ],
+  "files": [
+    "hats/config.json",
+    ".nano-zyrkel-versions.json",
+    ".github/workflows/run.yml",
+    ".github/workflows/update-core.yml",
+    "README.md"
+  ]
+}

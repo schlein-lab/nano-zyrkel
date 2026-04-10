@@ -1,6 +1,6 @@
 <p align="center">
-  <strong>nano-zyrkel</strong><br>
-  <em>Autonomous micro-agents that live in GitHub repos and run on Actions — no server required.</em>
+  <strong>nano-zyrkel SDK</strong><br>
+  <em>The SDK for autonomous micro-agents that live in GitHub repos and run on Actions — no server required.</em>
 </p>
 
 <p align="center">
@@ -14,12 +14,26 @@
 
 **One repo = one agent. GitHub Actions = the runtime. Git commits = the audit trail.**
 
-A nano-zyrkel is a small, config-driven agent that lives in a GitHub repository
-and does one thing well — monitor a feed, track a dataset, watch a website,
-process incoming email, render a dashboard. The Rust binary that runs the
-pipeline and the WebAssembly library that powers in-browser logic both live in
-**this** central repo, behind stable, semver-versioned APIs. Your nano-zyrkel
-repo pulls them in, pins a version, and ships.
+The **nano-zyrkel SDK** is the toolkit for building small,
+config-driven agents that live in a GitHub repository and do one
+thing well — monitor a feed, track a dataset, watch a website,
+process incoming email, render a dashboard. It ships:
+
+- A **binary core** (`nano-zyrkel-core`) that handles every server-side
+  concern: config parsing, fetchers, conditions, notifications,
+  actions, runtime dispatch.
+- A **WASM core** (`nano-zyrkel-wasm-core`) with browser-side
+  primitives: data loading, filtering, charts, UI components, the
+  whole rendering kit.
+- A **template library** of forkable scaffolds, themes and chart
+  examples — every entry has machine-readable `template.json`
+  metadata so the upcoming browser-based **nano-zyrkel builder**
+  can render a form for it and spawn a fresh user repo with one
+  click.
+
+Your nano-zyrkel pulls these from this repository, pins a version,
+and ships. The SDK promises stable, semver-versioned APIs on every
+layer.
 
 ---
 
@@ -374,21 +388,61 @@ read their `Cargo.toml`, `.nano-zyrkel-versions.json` and
 
 ## Documentation map
 
-| File                              | Read it when…                                       |
-| --------------------------------- | --------------------------------------------------- |
-| [`docs/architecture.md`][da]      | …you want the layered design in detail              |
-| [`docs/getting-started.md`][dg]   | …you are about to create your first nano-zyrkel    |
-| [`docs/theming.md`][dt]           | …you want to customize the look of a dashboard      |
-| [`docs/chart-cookbook.md`][dc]    | …you are wiring a chart and need a recipe           |
-| [`docs/plugin-guide.md`][dp]      | …you outgrew config and need custom Rust            |
-| [`compatibility.json`][cj]        | …you need the version matrix and breaking-change log|
+| File                                | Read it when…                                            |
+| ----------------------------------- | -------------------------------------------------------- |
+| [`docs/architecture.md`][da]        | …you want the layered design in detail                   |
+| [`docs/getting-started.md`][dg]     | …you are about to create your first nano-zyrkel          |
+| [`docs/theming.md`][dt]             | …you want to customize the look of a dashboard           |
+| [`docs/chart-cookbook.md`][dc]      | …you are wiring a chart and need a recipe                |
+| [`docs/plugin-guide.md`][dp]        | …you outgrew config and need custom Rust                 |
+| [`docs/secrets-cookbook.md`][ds]    | …you need to know which env vars each notifier wants     |
+| [`docs/deploying.md`][dd]           | …you want a non-GitHub-Pages target (Cloudflare, Forge…) |
+| [`docs/i18n-guide.md`][di]          | …you want a nano-zyrkel in multiple languages            |
+| [`docs/builder-guide.md`][db]       | …you are building tooling on top of the SDK schema       |
+| [`templates/manifest.json`][tm]     | …you want a machine-readable list of every template      |
+| [`templates/TEMPLATE-SCHEMA.md`][ts]| …you are writing your own template                       |
+| [`compatibility.json`][cj]          | …you need the version matrix and breaking-change log     |
 
 [da]: docs/architecture.md
 [dg]: docs/getting-started.md
 [dt]: docs/theming.md
 [dc]: docs/chart-cookbook.md
 [dp]: docs/plugin-guide.md
+[ds]: docs/secrets-cookbook.md
+[dd]: docs/deploying.md
+[di]: docs/i18n-guide.md
+[db]: docs/builder-guide.md
+[tm]: templates/manifest.json
+[ts]: templates/TEMPLATE-SCHEMA.md
 [cj]: compatibility.json
+
+---
+
+## Roadmap: the browser-based builder
+
+Every template in this repo ships with `template.json` metadata that
+describes its slots, file list and version requirements. The
+[`templates/manifest.json`](templates/manifest.json) at the root
+enumerates them all. The binary core exposes the same idea for the
+server side: `nano-zyrkel introspect` (or the `schema.json` asset on
+every `bin-v*` release) returns a typed catalog of every nano type,
+fetcher, condition, action and notifier the SDK ships with. The
+WASM core mirrors that with `wasmSdkSchema()` for browser-side
+primitives.
+
+Together those three artifacts are everything a **browser-based
+nano-zyrkel builder** needs:
+
+1. Read the template manifest and the SDK schema.
+2. Render a form per template with the right field types.
+3. Validate the user's choices against version requirements.
+4. Spawn a fresh GitHub repository and upload the substituted files.
+
+The reference builder will itself ship as a nano-zyrkel that anyone
+can fork — meta-circular by design. Until then,
+[`docs/builder-guide.md`](docs/builder-guide.md) is the contract;
+the schemas above are stable enough that any tool can already
+consume them today.
 
 ---
 

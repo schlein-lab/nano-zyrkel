@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-overview-cards",
+  "kind": "example",
+  "name": "Overview cards",
+  "description": "Stat cards with mini Donut charts and trend deltas, fed by a single staging snapshot.",
+  "tags": ["cards", "stats", "donut", "delta"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data", "viz-basic"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-multi-tab",
+  "kind": "example",
+  "name": "Multi-tab view",
+  "description": "Mount a tab strip + content panel with the wasm-core Tabs widget. Use it to split a dashboard into Overview / Details / History / Config tabs.",
+  "tags": ["tabs", "navigation", "viz-ui"],
+  "requires": {
+    "wasm": ">=0.2.0",
+    "wasm_features": ["viz-ui"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

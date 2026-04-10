@@ -1,0 +1,116 @@
+/* nano-zyrkel theme: multipage
+ *
+ * Sidebar layout for multi-section apps. Built for nano-zyrkels with
+ * many modules (helix has 10), gene / variant detail views (vusTracker),
+ * or any browser app where the user moves between distinct views.
+ *
+ * The .nz-app shell is a CSS grid: a fixed-width sidebar on the left
+ * and a fluid main pane on the right. Pair with the wasm-core Router
+ * (data feature) to swap content into <main> on hash change.
+ */
+
+:root {
+  --bg: #FFFFFF;
+  --sidebar-bg: #F9FAFB;
+  --border: #E5E7EB;
+  --text: #111827;
+  --muted: #6B7280;
+  --brand: #8B5CF6;
+  --brand-soft: rgba(139, 92, 246, 0.12);
+  --sidebar-w: 240px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--brand); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.nz-app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100vh;
+}
+
+.nz-sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem 1rem;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.nz-sidebar h1 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  color: var(--text);
+}
+
+.nz-sidebar .subtitle {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+}
+
+.nz-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nz-nav a {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nz-nav a:hover { background: var(--brand-soft); color: var(--text); }
+.nz-nav a.active { background: var(--brand-soft); color: var(--brand); }
+
+.nz-main {
+  padding: 2rem 2.5rem 4rem;
+  max-width: 1100px;
+}
+
+.nz-main h2 { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem; }
+.nz-main .subtitle { color: var(--muted); margin: 0 0 1.5rem; }
+
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+}
+
+@media (max-width: 768px) {
+  .nz-app { grid-template-columns: 1fr; }
+  .nz-sidebar {
+    position: relative;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .nz-main { padding: 1.5rem; }
+}

@@ -1,0 +1,21 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "theme-card-grid",
+  "kind": "theme",
+  "name": "Card grid",
+  "description": "Responsive collection grid with image, title, tags and body per card. Built for showcases that need more than two or three items.",
+  "tags": ["light", "grid", "collection", "responsive"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data"]
+  },
+  "slots": [
+    {
+      "name": "BRAND",
+      "label": "Brand color",
+      "kind": "color",
+      "default": "#8B5CF6"
+    }
+  ],
+  "files": ["docs/index.html", "docs/style.css", "README.md"]
+}

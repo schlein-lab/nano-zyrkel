@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-dashboard-grid",
+  "kind": "example",
+  "name": "Dashboard grid",
+  "description": "Four charts in a single responsive 2 × 2 grid: Donut, LineChart, BarChart and SortedBar all driven by mock data.",
+  "tags": ["dashboard", "grid", "donut", "line", "bar"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data", "viz-basic", "viz-advanced"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

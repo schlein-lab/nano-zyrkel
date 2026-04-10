@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-csv-export",
+  "kind": "example",
+  "name": "CSV export",
+  "description": "Render a table and ship a 'Download CSV' button using Csv.fromJsonArray + Csv.download from the wasm-core data layer.",
+  "tags": ["csv", "export", "download", "data"],
+  "requires": {
+    "wasm": ">=0.2.0",
+    "wasm_features": ["data"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

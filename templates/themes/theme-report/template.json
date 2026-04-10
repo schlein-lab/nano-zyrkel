@@ -1,0 +1,18 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "theme-report",
+  "kind": "theme",
+  "name": "Report",
+  "description": "Print-friendly A4 / Letter layout for nano-zyrkels that produce static reports — newsletters, weekly digests, literature alerts.",
+  "tags": ["light", "report", "print", "serif", "newsletter"],
+  "requires": {},
+  "slots": [
+    {
+      "name": "ACCENT",
+      "label": "Accent color",
+      "kind": "color",
+      "default": "#1D4ED8"
+    }
+  ],
+  "files": ["docs/index.html", "docs/style.css", "README.md"]
+}

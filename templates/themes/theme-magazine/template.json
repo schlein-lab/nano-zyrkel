@@ -1,0 +1,18 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "theme-magazine",
+  "kind": "theme",
+  "name": "Magazine",
+  "description": "Editorial layout with large Playfair Display headlines and a two-column serif body. Built for newsletters and research digests.",
+  "tags": ["editorial", "serif", "newsletter", "two-column"],
+  "requires": {},
+  "slots": [
+    {
+      "name": "ACCENT",
+      "label": "Accent color",
+      "kind": "color",
+      "default": "#B8312F"
+    }
+  ],
+  "files": ["docs/index.html", "docs/style.css", "README.md"]
+}

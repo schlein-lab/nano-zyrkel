@@ -1,0 +1,24 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "theme-clinical",
+  "kind": "theme",
+  "name": "Clinical",
+  "description": "White, blue, lots of whitespace, Inter font. Built for medical and scientific dashboards where readability matters more than visual flash.",
+  "tags": ["light", "scientific", "minimal", "inter"],
+  "requires": {},
+  "slots": [
+    {
+      "name": "BRAND",
+      "label": "Brand color",
+      "kind": "color",
+      "default": "#2563EB"
+    },
+    {
+      "name": "BRAND_2",
+      "label": "Secondary accent",
+      "kind": "color",
+      "default": "#06B6D4"
+    }
+  ],
+  "files": ["docs/index.html", "docs/style.css", "README.md"]
+}

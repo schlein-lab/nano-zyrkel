@@ -1,0 +1,15 @@
+name: Weekly digest
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  run:
+    uses: schlein-lab/nano-zyrkel/.github/workflows/data-update.yml@main
+    with:
+      lang: en
+    secrets:
+      smtp-username: ${{ secrets.SMTP_USERNAME }}
+      smtp-password: ${{ secrets.SMTP_PASSWORD }}

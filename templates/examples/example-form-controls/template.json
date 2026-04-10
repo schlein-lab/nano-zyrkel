@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-form-controls",
+  "kind": "example",
+  "name": "Form-driven chart",
+  "description": "TextInput / Select / Range bindings from viz-ui that re-render a LineChart on every change. The standard pattern for a filterable dashboard.",
+  "tags": ["form", "filter", "live", "viz-ui"],
+  "requires": {
+    "wasm": ">=0.2.0",
+    "wasm_features": ["data", "viz-basic", "viz-ui"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

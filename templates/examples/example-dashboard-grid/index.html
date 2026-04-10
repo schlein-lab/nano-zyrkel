@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+  Example: 2 × 2 dashboard grid
+  -----------------------------
+  Four charts in a single responsive grid: a Donut, a LineChart, a
+  BarChart and a SortedBar — all driven by the same staging snapshot.
+  Drop next to your wasm-core bundle.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Dashboard grid</title>
+<style>
+  body { font: 14px/1.55 'Inter', system-ui, sans-serif; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, 1fr); }
+  .card { border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; background: #FFFFFF; }
+  .card h2 { font-size: 0.875rem; margin: 0 0 0.5rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>Dashboard grid</h1>
+<div class="grid">
+  <div class="card"><h2>Status mix</h2><canvas id="donut"></canvas></div>
+  <div class="card"><h2>Activity (90d)</h2><canvas id="line"></canvas></div>
+  <div class="card"><h2>Source breakdown</h2><canvas id="bar"></canvas></div>
+  <div class="card"><h2>Top 10 contributors</h2><canvas id="sorted"></canvas></div>
+</div>
+
+<script type="module">
+import init, {
+  install_panic_hook,
+  ChartCanvas, Padding, Scale, draw_y_grid,
+  LineChart, BarChart, Donut, SortedBar, Format,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+// Donut.
+new Donut(document.getElementById('donut'), 120)
+  .data([
+    { label: 'Active',   value: 142, color: '#16A34A' },
+    { label: 'Pending',  value:  31, color: '#F59E0B' },
+    { label: 'Stalled',  value:  12, color: '#DC2626' },
+  ])
+  .innerRatio(0.62)
+  .centerLabel('185')
+  .draw();
+
+// Line.
+const lineCanvas = new ChartCanvas(document.getElementById('line'), 200, new Padding(36, 12, 12, 24));
+const linePoints = Array.from({ length: 30 }, (_, i) => ({ x: i, y: 20 + Math.sin(i / 4) * 8 + i * 0.5 }));
+const xs = Scale.linear(0, 29, lineCanvas.plotLeft(), lineCanvas.plotLeft() + lineCanvas.plotWidth());
+const ys = Scale.linear(0, 50, lineCanvas.plotTop() + lineCanvas.plotHeight(), lineCanvas.plotTop());
+draw_y_grid(lineCanvas, ys, 5, v => Format.fixed(v, 0));
+new LineChart(lineCanvas).x(xs).y(ys).data(linePoints).stroke('#8B5CF6', 2).fillUnder('rgba(139,92,246,0.12)').draw();
+
+// Bar.
+const barCanvas = new ChartCanvas(document.getElementById('bar'), 200, new Padding(36, 12, 12, 24));
+const barData = [
+  { label: 'PubMed', value: 64 },
+  { label: 'bioRxiv', value: 32 },
+  { label: 'medRxiv', value: 18 },
+  { label: 'CrossRef', value: 12 },
+];
+const ymax = Math.max(...barData.map(b => b.value));
+const yScale = Scale.linear(0, ymax * 1.1, barCanvas.plotTop() + barCanvas.plotHeight(), barCanvas.plotTop());
+draw_y_grid(barCanvas, yScale, 5, v => Format.fixed(v, 0));
+BarChart.single(barCanvas, barData).y(yScale).color('#06B6D4').draw();
+
+// Sorted bar.
+const sortedCanvas = new ChartCanvas(document.getElementById('sorted'), 200, new Padding(36, 12, 12, 24));
+new SortedBar(sortedCanvas, [
+  { label: 'alpha', value: 142 },
+  { label: 'beta',  value:  98 },
+  { label: 'gamma', value:  76 },
+  { label: 'delta', value:  54 },
+  { label: 'eps',   value:  41 },
+]).top(10).color('#8B5CF6').draw();
+</script>
+</body>
+</html>

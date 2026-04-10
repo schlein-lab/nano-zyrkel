@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "schema": "nano-zyrkel-templates/v1",
+  "version": "0.2.0",
+  "released": "2026-04-10",
+  "_comment": "Master index of every shipped template. Consumed by the browser-based nano-zyrkel builder so it can discover scaffolds, themes and examples in a single fetch. Each entry points at a template.json file inside the corresponding directory; that file describes the slots a user can fill in plus the files that will be materialised into the new repo.",
+
+  "scaffolds": [
+    {
+      "id": "scaffold-data-pipeline",
+      "path": "scaffolds/scaffold-data-pipeline",
+      "manifest": "scaffolds/scaffold-data-pipeline/template.json"
+    },
+    {
+      "id": "scaffold-interactive-app",
+      "path": "scaffolds/scaffold-interactive-app",
+      "manifest": "scaffolds/scaffold-interactive-app/template.json"
+    },
+    {
+      "id": "scaffold-showcase",
+      "path": "scaffolds/scaffold-showcase",
+      "manifest": "scaffolds/scaffold-showcase/template.json"
+    },
+    {
+      "id": "scaffold-monitor",
+      "path": "scaffolds/scaffold-monitor",
+      "manifest": "scaffolds/scaffold-monitor/template.json"
+    },
+    {
+      "id": "scaffold-newsletter",
+      "path": "scaffolds/scaffold-newsletter",
+      "manifest": "scaffolds/scaffold-newsletter/template.json"
+    }
+  ],
+
+  "themes": [
+    { "id": "theme-clinical",   "path": "themes/theme-clinical",   "manifest": "themes/theme-clinical/template.json" },
+    { "id": "theme-dashboard",  "path": "themes/theme-dashboard",  "manifest": "themes/theme-dashboard/template.json" },
+    { "id": "theme-magazine",   "path": "themes/theme-magazine",   "manifest": "themes/theme-magazine/template.json" },
+    { "id": "theme-minimal",    "path": "themes/theme-minimal",    "manifest": "themes/theme-minimal/template.json" },
+    { "id": "theme-cinematic",  "path": "themes/theme-cinematic",  "manifest": "themes/theme-cinematic/template.json" },
+    { "id": "theme-multipage",  "path": "themes/theme-multipage",  "manifest": "themes/theme-multipage/template.json" },
+    { "id": "theme-report",     "path": "themes/theme-report",     "manifest": "themes/theme-report/template.json" },
+    { "id": "theme-card-grid",  "path": "themes/theme-card-grid",  "manifest": "themes/theme-card-grid/template.json" }
+  ],
+
+  "examples": [
+    { "id": "example-time-series",     "path": "examples/example-time-series",     "manifest": "examples/example-time-series/template.json" },
+    { "id": "example-overview-cards",  "path": "examples/example-overview-cards",  "manifest": "examples/example-overview-cards/template.json" },
+    { "id": "example-data-table",      "path": "examples/example-data-table",      "manifest": "examples/example-data-table/template.json" },
+    { "id": "example-geographic",      "path": "examples/example-geographic",      "manifest": "examples/example-geographic/template.json" },
+    { "id": "example-genome-track",    "path": "examples/example-genome-track",    "manifest": "examples/example-genome-track/template.json" },
+    { "id": "example-network-graph",   "path": "examples/example-network-graph",   "manifest": "examples/example-network-graph/template.json" },
+    { "id": "example-dashboard-grid",  "path": "examples/example-dashboard-grid",  "manifest": "examples/example-dashboard-grid/template.json" },
+    { "id": "example-form-controls",   "path": "examples/example-form-controls",   "manifest": "examples/example-form-controls/template.json" },
+    { "id": "example-csv-export",      "path": "examples/example-csv-export",      "manifest": "examples/example-csv-export/template.json" },
+    { "id": "example-multi-tab",       "path": "examples/example-multi-tab",       "manifest": "examples/example-multi-tab/template.json" },
+    { "id": "example-comparison",      "path": "examples/example-comparison",      "manifest": "examples/example-comparison/template.json" },
+    { "id": "example-survival",        "path": "examples/example-survival",        "manifest": "examples/example-survival/template.json" },
+    { "id": "example-plugin",          "path": "examples/example-plugin",          "manifest": "examples/example-plugin/template.json" }
+  ]
+}

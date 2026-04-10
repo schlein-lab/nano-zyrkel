@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<!--
+  Example: Form controls driving a live chart
+  -------------------------------------------
+  TextInput / Select / Range bindings from the wasm-core viz-ui layer
+  feed a chart that re-renders on every change. Replace the mock data
+  with a DataLoader call to wire it to your real staging snapshot.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Example — Form controls</title>
+<style>
+  body { font: 14px/1.55 'Inter', system-ui, sans-serif; padding: 2rem; max-width: 900px; margin: 0 auto; }
+  .toolbar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  label { display: block; font-size: 0.75rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+  input, select { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #D1D5DB; border-radius: 6px; font: inherit; }
+  .card { border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; }
+</style>
+</head>
+<body>
+<h1>Form-driven chart</h1>
+
+<div class="toolbar">
+  <div>
+    <label>Search</label>
+    <input id="q" type="search" placeholder="filter…">
+  </div>
+  <div>
+    <label>Group</label>
+    <select id="group">
+      <option value="all">All</option>
+      <option value="active">Active</option>
+      <option value="archived">Archived</option>
+    </select>
+  </div>
+  <div>
+    <label>Smoothing</label>
+    <input id="smooth" type="range" min="1" max="10" value="3">
+  </div>
+</div>
+
+<div class="card">
+  <canvas id="chart"></canvas>
+</div>
+
+<script type="module">
+import init, {
+  install_panic_hook,
+  ChartCanvas, Padding, Scale, draw_y_grid,
+  LineChart, TextInput, Select, Range, Format,
+} from '../../core/wasm/profile/nano_zyrkel_wasm_core.js';
+
+await init();
+install_panic_hook();
+
+let q = '';
+let group = 'all';
+let smooth = 3;
+
+function render() {
+  const host = document.getElementById('chart');
+  host.width = host.parentElement.clientWidth * 2;
+  host.height = 400;
+  const canvas = new ChartCanvas(host, 200, new Padding(36, 12, 12, 24));
+
+  // Generate mock series — in a real app this would come from a
+  // DataLoader.fetch + Filter pipeline keyed on q + group.
+  const points = Array.from({ length: 60 }, (_, i) => {
+    const base = group === 'active' ? 30 : group === 'archived' ? 10 : 20;
+    const noise = Math.sin(i / smooth) * 8;
+    const offset = q.length * 2;
+    return { x: i, y: Math.max(0, base + noise + offset) };
+  });
+
+  const xs = Scale.linear(0, 59, canvas.plotLeft(), canvas.plotLeft() + canvas.plotWidth());
+  const ys = Scale.linear(0, 60, canvas.plotTop() + canvas.plotHeight(), canvas.plotTop());
+  draw_y_grid(canvas, ys, 5, v => Format.fixed(v, 0));
+  new LineChart(canvas).x(xs).y(ys).data(points).stroke('#8B5CF6', 2).draw();
+}
+render();
+
+TextInput.bind('#q', value => { q = value; render(); }, { debounceMs: 200 });
+Select.bind('#group', value => { group = value; render(); });
+Range.bind('#smooth', value => { smooth = value; render(); });
+</script>
+</body>
+</html>

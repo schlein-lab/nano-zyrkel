@@ -1,0 +1,14 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "example-genome-track",
+  "kind": "example",
+  "name": "Linear track",
+  "description": "1D coordinate viewer with markers, zoom and pan controls. Generic enough for genomic positions, time, log lines or any ordered axis.",
+  "tags": ["track", "1d", "zoom", "markers"],
+  "requires": {
+    "wasm": ">=0.1.0",
+    "wasm_features": ["data", "viz-basic", "viz-spatial"]
+  },
+  "slots": [],
+  "files": ["index.html"]
+}

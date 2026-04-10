@@ -1,0 +1,11 @@
+{
+  "schema": "nano-zyrkel-template/v1",
+  "id": "theme-minimal",
+  "kind": "theme",
+  "name": "Minimal",
+  "description": "Black on white, Helvetica, no chrome. Use it for status pages and short reports where the data should be the only thing on screen.",
+  "tags": ["light", "minimal", "monochrome", "status"],
+  "requires": {},
+  "slots": [],
+  "files": ["docs/index.html", "docs/style.css", "README.md"]
+}
