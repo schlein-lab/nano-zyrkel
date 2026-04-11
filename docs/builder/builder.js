@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    nano-zyrkel Project Studio — builder.js
-   Dropdown catalog + Live product preview with composable slots
+   Three-Layer Architecture: Intent → Questions → Live Preview
    ═══════════════════════════════════════════════════════════════ */
 
 // ─── MINI VISUAL GENERATORS ─────────────────────────────────
@@ -52,7 +52,7 @@ function miniThresholdChart(color) {
 
 function miniScatter() {
   return `<svg viewBox="0 0 100 50" class="mini-chart">
-    ${Array.from({length: 12}, (_, i) => {
+    ${Array.from({length: 12}, () => {
       const cx = 5 + Math.random() * 90;
       const cy = 5 + Math.random() * 40;
       const r = 1.5 + Math.random() * 2;
@@ -471,356 +471,446 @@ function miniFeed() {
   </div>`;
 }
 
-// Starter template composites
-function miniStarter(icon, title, accent) {
-  return `<div style="width:100%; height:100%; display:flex; flex-direction:column; padding:6px; gap:4px;">
-    <div style="font-size:22px; text-align:center; color:${accent};">${icon}</div>
-    <div style="font-size:9px; text-align:center; color:var(--text-dim); font-weight:600;">${title}</div>
-  </div>`;
-}
+// ─── INTENT DEFINITIONS ─────────────────────────────────────
 
-function miniStarterPageAlert()   { return miniStarter('&#x1F514;', 'Seite beobachten', '#06b6d4'); }
-function miniStarterPriceTrack()  { return miniStarter('&#x1F4B0;', 'Preis verfolgen', '#22c55e'); }
-function miniStarterAvailWatch()  { return miniStarter('&#x1F3AB;', 'Verfuegbarkeit', '#f59e0b'); }
-function miniStarterApiHealth()   { return miniStarter('&#x1F50C;', 'API-Status', '#ef4444'); }
-function miniStarterRssDigest()   { return miniStarter('&#x1F4F0;', 'News-Digest', '#b45309'); }
-function miniStarterFormWatch()   { return miniStarter('&#x1F4DD;', 'Formular offen?', '#8b5cf6'); }
-function miniStarterJobAlert()    { return miniStarter('&#x1F4BC;', 'Neue Stellen', '#06b6d4'); }
-function miniStarterDashboard()   { return miniStarter('&#x1F4CA;', 'Live-Dashboard', '#8b5cf6'); }
-function miniStarterMailBot()     { return miniStarter('&#x1F4E7;', 'Email-Bot', '#ec4899'); }
-function miniStarterDeadline()    { return miniStarter('&#x23F0;', 'Frist-Erinnerer', '#f59e0b'); }
-function miniStarterSocialWatch() { return miniStarter('&#x1F4AC;', 'Erwaehnung finden', '#06b6d4'); }
-function miniStarterPortal()      { return miniStarter('&#x2728;', 'Projekt-Portal', '#8b5cf6'); }
-function miniStarterCertExpiry()  { return miniStarter('&#x1F512;', 'SSL-Ablauf', '#ef4444'); }
-function miniStarterStockAlert()  { return miniStarter('&#x1F4C8;', 'Kurs-Alert', '#22c55e'); }
-function miniStarterWeatherBot()  { return miniStarter('&#x26C5;', 'Wetter-Bot', '#06b6d4'); }
-function miniStarterCompetitor()  { return miniStarter('&#x1F50D;', 'Konkurrenz-Watch', '#f59e0b'); }
-
-// ─── CATEGORIES & BLOCKS ─────────────────────────────────────
-
-const CATEGORIES = [
+const INTENTS = [
   {
-    id: 'showcase', name: 'Start', icon: '\u2728',
-    blocks: [
-      { id: 'start-page-alert', name: 'Webseite beobachten', desc: 'Benachrichtigung wenn sich eine Seite aendert',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-url', 'cond-contains', 'sched-hourly', 'notify-telegram', 'notify-silence'],
-        visual: miniStarterPageAlert },
-      { id: 'start-price-track', name: 'Preis verfolgen', desc: 'Alert wenn ein Preis steigt oder faellt',
-        starter: true, design: 'theme-dashboard',
-        autoBlocks: ['src-url', 'cond-threshold', 'sched-hourly', 'notify-telegram'],
-        visual: miniStarterPriceTrack },
-      { id: 'start-avail-watch', name: 'Verfuegbarkeit pruefen', desc: 'Kurs, Ticket, Termin — sofort Bescheid',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-url', 'cond-contains', 'sched-15min', 'notify-telegram', 'notify-silence'],
-        visual: miniStarterAvailWatch },
-      { id: 'start-api-health', name: 'API-Status ueberwachen', desc: 'Uptime, Antwortzeit, Fehler erkennen',
-        starter: true, design: 'theme-dashboard',
-        autoBlocks: ['src-api', 'cond-threshold', 'sched-5min', 'notify-slack', 'feat-viz-basic'],
-        visual: miniStarterApiHealth },
-      { id: 'start-rss-digest', name: 'News zusammenfassen', desc: 'RSS-Feeds taeglich als Digest erhalten',
-        starter: true, design: 'theme-magazine',
-        autoBlocks: ['src-rss', 'cond-rss', 'sched-daily-morning', 'notify-email'],
-        visual: miniStarterRssDigest },
-      { id: 'start-form-watch', name: 'Formular offen?', desc: 'Anmeldung, Registrierung — wird freigeschaltet?',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-url', 'cond-css', 'sched-15min', 'notify-telegram', 'notify-silence'],
-        visual: miniStarterFormWatch },
-      { id: 'start-job-alert', name: 'Stellenangebote', desc: 'Neue Jobs auf einer Karriereseite finden',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-url', 'cond-changed', 'sched-daily-morning', 'notify-email'],
-        visual: miniStarterJobAlert },
-      { id: 'start-dashboard', name: 'Live-Dashboard', desc: 'Daten sammeln + als Website visualisieren',
-        starter: true, design: 'theme-dashboard',
-        autoBlocks: ['src-api', 'sched-3h', 'feat-data', 'feat-viz-basic', 'act-publish'],
-        visual: miniStarterDashboard },
-      { id: 'start-mailbot', name: 'Email-Assistent', desc: 'Emails lesen, analysieren, antworten lassen',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-imap', 'cond-llm', 'sched-15min', 'notify-telegram'],
-        visual: miniStarterMailBot },
-      { id: 'start-deadline', name: 'Frist-Erinnerer', desc: 'Countdown + gestaffelte Erinnerungen',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-url', 'cond-deadline', 'sched-daily-morning', 'notify-telegram'],
-        visual: miniStarterDeadline },
-      { id: 'start-social', name: 'Erwaehnungen finden', desc: 'Marke, Name, Produkt — wer redet darueber?',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-url', 'cond-contains', 'sched-3h', 'notify-telegram'],
-        visual: miniStarterSocialWatch },
-      { id: 'start-portal', name: 'Projekt-Portal', desc: 'Hub-Seite fuer deine Projekte',
-        starter: true, design: 'theme-cinematic',
-        autoBlocks: ['src-github', 'sched-daily-morning', 'act-publish'],
-        visual: miniStarterPortal },
-      { id: 'start-cert', name: 'SSL-Ablauf pruefen', desc: 'Zertifikat laeuft ab? Rechtzeitig warnen',
-        starter: true, design: 'theme-dashboard',
-        autoBlocks: ['src-url', 'cond-deadline', 'sched-daily-morning', 'notify-slack'],
-        visual: miniStarterCertExpiry },
-      { id: 'start-stock', name: 'Kurs-Benachrichtigung', desc: 'Aktie, Crypto, Index — Schwellwert-Alert',
-        starter: true, design: 'theme-dashboard',
-        autoBlocks: ['src-api', 'cond-threshold', 'sched-hourly', 'notify-telegram', 'feat-viz-basic'],
-        visual: miniStarterStockAlert },
-      { id: 'start-weather', name: 'Wetter-Bot', desc: 'Taegliche Wettervorhersage per Telegram',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-api', 'sched-daily-morning', 'notify-telegram'],
-        visual: miniStarterWeatherBot },
-      { id: 'start-competitor', name: 'Konkurrenz beobachten', desc: 'Webseite eines Wettbewerbers tracken',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-url', 'cond-changed', 'sched-daily-morning', 'notify-email'],
-        visual: miniStarterCompetitor },
-      { id: 'start-custom-simple', name: 'Einfacher Agent', desc: 'Leer starten — nur Quelle + Bedingung + Alert',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-url', 'sched-daily-morning', 'notify-telegram'],
-        visual: () => miniStarter('&#x1F680;', 'Einfach starten', '#8b5cf6') },
-      { id: 'start-custom-dashboard', name: 'Dashboard bauen', desc: 'Leer starten — mit Visualisierung',
-        starter: true, design: 'theme-dashboard',
-        autoBlocks: ['src-api', 'sched-3h', 'feat-data', 'feat-viz-basic'],
-        visual: () => miniStarter('&#x1F3A8;', 'Dashboard leer', '#06b6d4') },
-      { id: 'start-custom-pipeline', name: 'Daten-Pipeline', desc: 'Leer starten — Daten holen, verarbeiten, speichern',
-        starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-api', 'sched-daily-morning', 'act-s3'],
-        visual: () => miniStarter('&#x1F504;', 'Pipeline leer', '#22c55e') },
-      { id: 'start-custom-blank', name: 'Komplett leer', desc: 'Ganz von vorne — jedes Teil selbst waehlen',
-        starter: true, design: 'theme-cardgrid',
-        autoBlocks: [],
-        visual: () => miniStarter('&#x2795;', 'Leer starten', '#94a3b8') },
-    ]
+    id: 'observe',
+    icon: '\uD83E\uDDE0',
+    question: 'Lies eine Seite und verstehe ob etwas passiert ist',
+    examples: 'KI liest + entscheidet, nicht nur Textsuche — z.B. "Hat sich die Rechtslage geaendert?"',
+    title: 'Mein Versteher'
   },
+  {
+    id: 'measure',
+    icon: '\uD83D\uDCCA',
+    question: 'Analysiere Daten, finde Trends und Anomalien',
+    examples: 'Survival-Kurven, Korrelationen, Ausreisser — wissenschaftliches Compute ohne Server',
+    title: 'Mein Analyst'
+  },
+  {
+    id: 'collect',
+    icon: '\uD83E\uDDF9',
+    question: 'Filtere aus vielen Quellen das Relevante heraus',
+    examples: 'Nicht nur sammeln — kuratieren, bewerten, priorisieren mit LLM',
+    title: 'Mein Kurator'
+  },
+  {
+    id: 'react',
+    icon: '\uD83E\uDD16',
+    question: 'Handle autonom — mit Verstand und Genehmigung',
+    examples: 'Email analysieren + Antwort vorschlagen + per Telegram freigeben lassen',
+    title: 'Mein Agent'
+  },
+  {
+    id: 'present',
+    icon: '\uD83D\uDDA5',
+    question: 'Baue ein interaktives Dashboard oder eine App',
+    examples: 'Genom-Tracks, Netzwerk-Graphen, Heatmaps — WASM-Power im Browser, kein Backend',
+    title: 'Mein Dashboard'
+  },
+  {
+    id: 'remind',
+    icon: '\uD83D\uDD0D',
+    question: 'Ueberwache aktiv bis etwas eintritt',
+    examples: 'Nicht Timer sondern Agent: prueft regelmaessig ob eine Bedingung wahr wird',
+    title: 'Mein Waechter'
+  },
+  {
+    id: 'blank',
+    icon: '\u2699\uFE0F',
+    question: 'Eigenes System — Rust-Plugin, Custom-Logik, Pipeline',
+    examples: 'Fuer Entwickler: komplett leer starten, alles selbst zusammenbauen',
+    title: 'Mein System'
+  }
+];
+
+// ─── QUESTION DEFINITIONS PER INTENT ─────────────────────────
+
+const QUESTIONS = {
+  observe: [
+    {
+      id: 'what',
+      label: 'Was soll dein Agent lesen und verstehen?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: 'website', icon: '\uD83C\uDF10', label: 'Eine Webseite', visual: () => miniBrowser('https://...', '<div class="mini-browser-line" style="width:80%"></div><div class="mini-browser-line" style="width:60%"></div>') },
+        { id: 'api', icon: '\uD83D\uDD0C', label: 'Eine API / Datenquelle', visual: () => miniJson(`{<br>&nbsp;&nbsp;<span class="key">"status"</span>: <span class="str">"ok"</span><br>}`) },
+        { id: 'feed', icon: '\uD83D\uDCF0', label: 'Einen RSS/Atom Feed', visual: miniFeed },
+        { id: 'inbox', icon: '\uD83D\uDCE7', label: 'Ein Email-Postfach', visual: miniInbox },
+        { id: 'multi', icon: '\uD83D\uDD17', label: 'Mehrere Quellen kombinieren', visual: () => miniJson(`<span class="key">"sources"</span>: [<span class="num">3</span>]`) }
+      ]
+    },
+    {
+      id: 'change',
+      label: 'Was soll der Agent erkennen?',
+      type: 'cards',
+      gridClass: 'wide',
+      options: [
+        { id: 'llm', icon: '\uD83E\uDDE0', label: 'Stelle eine Frage an die Seite (KI liest + versteht)', visual: miniAiChat, field: { name: 'question', placeholder: 'z.B. "Hat sich die Rechtslage zu Thema X geaendert?" oder "Gibt es neue Ausschreibungen?"', type: 'textarea' } },
+        { id: 'contains', icon: '\uD83D\uDCDD', label: 'Ein bestimmter Text taucht auf', visual: miniPageHighlight, field: { name: 'searchText', placeholder: 'z.B. "freie Plaetze"', type: 'text' } },
+        { id: 'changed', icon: '\uD83D\uDD04', label: 'Strukturelle Aenderung erkennen', visual: miniDiff },
+        { id: 'threshold', icon: '\uD83D\uDCCA', label: 'Ein Wert ueberschreitet eine Grenze', visual: () => miniThresholdChart('#ef4444'), field: { name: 'threshold', type: 'threshold' } },
+        { id: 'css', icon: '\uD83C\uDFF7', label: 'Ein bestimmtes Element erscheint/verschwindet', visual: miniDomTree, field: { name: 'selector', placeholder: '.registration-open', type: 'text' } },
+        { id: 'schema', icon: '\uD83D\uDCC4', label: 'API-Vertrag verletzt (Schema-Validierung)', visual: () => miniJson(`<span class="key">"type"</span>: <span class="str">"object"</span>`), field: { name: 'schema', placeholder: 'JSON Schema...', type: 'textarea' } }
+      ]
+    },
+    {
+      id: 'schedule',
+      label: 'Wie dringend?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: '5min', icon: '\u26A1', label: 'Sofort (alle 5 Min)', visual: () => miniTimelineDots(20, 3), cron: '*/5 * * * *' },
+        { id: 'hourly', icon: '\u23F0', label: 'Stuendlich', visual: () => miniClockFace(0, 0), cron: '0 * * * *' },
+        { id: 'daily', icon: '\uD83D\uDCC5', label: 'Taeglich', visual: () => miniClockFace(240, 0), cron: '0 8 * * *' },
+        { id: 'weekly', icon: '\uD83D\uDCC6', label: 'Woechentlich', visual: () => miniWeekStrip(0), cron: '0 8 * * 1' }
+      ]
+    },
+    {
+      id: 'notify',
+      label: 'Wohin benachrichtigen?',
+      type: 'cards-multi',
+      gridClass: '',
+      options: [
+        { id: 'telegram', icon: '\uD83D\uDCAC', label: 'Telegram', visual: miniTelegram },
+        { id: 'email', icon: '\uD83D\uDCE7', label: 'Email', visual: miniEmailCard },
+        { id: 'slack', icon: '\uD83D\uDCBC', label: 'Slack', visual: miniSlack },
+        { id: 'discord', icon: '\uD83C\uDFAE', label: 'Discord', visual: miniDiscord },
+        { id: 'silence', icon: '\u2705', label: 'Stille-Bestaetigung', visual: miniSilence }
+      ]
+    }
+  ],
+  measure: [
+    {
+      id: 'what',
+      label: 'Was misst du?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: 'api', icon: '\uD83D\uDD0C', label: 'API-Endpunkt', visual: () => miniJson(`{<br>&nbsp;&nbsp;<span class="key">"value"</span>: <span class="num">42</span><br>}`) },
+        { id: 'website', icon: '\uD83C\uDF10', label: 'Webseite-Wert', visual: () => miniBrowser('https://...', '<div class="mini-browser-line" style="width:70%"></div>') },
+        { id: 'cloud', icon: '\u2601\uFE0F', label: 'Cloud-Metrik', visual: miniAwsCloud },
+        { id: 'database', icon: '\uD83D\uDDC4', label: 'Datenbank', visual: miniDatabase }
+      ]
+    },
+    {
+      id: 'value_path',
+      label: 'Welcher Wert?',
+      type: 'field',
+      fieldConfig: { name: 'valuePath', placeholder: 'JSON-Path, CSS-Selector oder Beschreibung', type: 'text' }
+    },
+    {
+      id: 'alert',
+      label: 'Schwellwert-Alert?',
+      type: 'cards',
+      gridClass: 'wide',
+      options: [
+        { id: 'yes', icon: '\uD83D\uDEA8', label: 'Ja: Wenn Wert Grenze ueberschreitet', visual: () => miniThresholdChart('#ef4444'), field: { name: 'threshold', type: 'threshold' } },
+        { id: 'no', icon: '\uD83D\uDCDD', label: 'Nein, nur aufzeichnen', visual: () => miniLineChart('#22c55e') }
+      ]
+    },
+    {
+      id: 'viz',
+      label: 'Visualisierung?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: 'line', icon: '\uD83D\uDCC8', label: 'Line Chart', visual: () => miniLineChart('#8B5CF6') },
+        { id: 'bar', icon: '\uD83D\uDCCA', label: 'Bar Chart', visual: () => miniBarChart('#06b6d4') },
+        { id: 'donut', icon: '\uD83C\uDF69', label: 'Donut', visual: () => miniDonutChart('#8B5CF6') },
+        { id: 'heatmap', icon: '\uD83D\uDDFA', label: 'Heatmap', visual: miniHeatmap }
+      ]
+    },
+    {
+      id: 'schedule',
+      label: 'Zeitplan',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: '5min', icon: '\u26A1', label: 'Alle 5 Minuten', visual: () => miniTimelineDots(20, 3), cron: '*/5 * * * *' },
+        { id: 'hourly', icon: '\u23F0', label: 'Stuendlich', visual: () => miniClockFace(0, 0), cron: '0 * * * *' },
+        { id: 'daily', icon: '\uD83D\uDCC5', label: 'Taeglich', visual: () => miniClockFace(240, 0), cron: '0 8 * * *' },
+        { id: 'weekly', icon: '\uD83D\uDCC6', label: 'Woechentlich', visual: () => miniWeekStrip(0), cron: '0 8 * * 1' }
+      ]
+    },
+    {
+      id: 'notify',
+      label: 'Benachrichtigen',
+      type: 'cards-multi',
+      gridClass: '',
+      options: [
+        { id: 'telegram', icon: '\uD83D\uDCAC', label: 'Telegram', visual: miniTelegram },
+        { id: 'email', icon: '\uD83D\uDCE7', label: 'Email', visual: miniEmailCard },
+        { id: 'slack', icon: '\uD83D\uDCBC', label: 'Slack', visual: miniSlack },
+        { id: 'discord', icon: '\uD83C\uDFAE', label: 'Discord', visual: miniDiscord },
+        { id: 'silence', icon: '\u2705', label: 'Stille-Bestaetigung', visual: miniSilence }
+      ]
+    }
+  ],
+  collect: [
+    {
+      id: 'what',
+      label: 'Was sammeln?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: 'rss', icon: '\uD83D\uDCF0', label: 'RSS/Atom Feeds', visual: miniFeed },
+        { id: 'email', icon: '\uD83D\uDCE7', label: 'Emails', visual: miniInbox },
+        { id: 'api', icon: '\uD83D\uDD0C', label: 'API-Daten', visual: () => miniJson(`{<br>&nbsp;&nbsp;<span class="key">"items"</span>: [<span class="num">...</span>]<br>}`) },
+        { id: 'urls', icon: '\uD83D\uDD17', label: 'Mehrere URLs', visual: () => miniBrowser('https://...', '<div class="mini-browser-line" style="width:80%"></div>') }
+      ]
+    },
+    {
+      id: 'format',
+      label: 'Wie zusammenfassen?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: 'list', icon: '\uD83D\uDCCB', label: 'Als Liste', visual: miniFeed },
+        { id: 'email_digest', icon: '\uD83D\uDCE7', label: 'Als Email-Digest', visual: miniEmailCard },
+        { id: 'webpage', icon: '\uD83C\uDF10', label: 'Als Webseite', visual: () => miniBrowser('digest.html', '<div class="mini-browser-line" style="width:90%"></div><div class="mini-browser-line" style="width:70%"></div>') },
+        { id: 'github_issue', icon: '\uD83D\uDCDD', label: 'Als GitHub Issue', visual: miniGhIssue }
+      ]
+    },
+    {
+      id: 'schedule',
+      label: 'Frequenz',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: 'daily', icon: '\uD83D\uDCC5', label: 'Taeglich', visual: () => miniClockFace(240, 0), cron: '0 8 * * *' },
+        { id: 'weekly', icon: '\uD83D\uDCC6', label: 'Woechentlich', visual: () => miniWeekStrip(0), cron: '0 8 * * 1' },
+        { id: 'monthly', icon: '\uD83D\uDCC6', label: 'Monatlich', visual: () => miniCalendar(1), cron: '0 8 1 * *' }
+      ]
+    }
+  ],
+  react: [
+    {
+      id: 'trigger',
+      label: 'Worauf reagieren?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: 'email', icon: '\uD83D\uDCE7', label: 'Eingehende Email', visual: miniInbox },
+        { id: 'webhook', icon: '\uD83D\uDD17', label: 'Webhook empfangen', visual: miniWebhookIn },
+        { id: 'feed', icon: '\uD83D\uDCF0', label: 'Neuer Feed-Eintrag', visual: miniRssNew },
+        { id: 'change', icon: '\uD83D\uDD04', label: 'Aenderung erkannt', visual: miniDiff }
+      ]
+    },
+    {
+      id: 'action',
+      label: 'Was tun?',
+      type: 'cards',
+      gridClass: 'wide',
+      options: [
+        { id: 'reply_email', icon: '\uD83D\uDCE7', label: 'Email antworten', visual: miniEmailCard },
+        { id: 'webhook_out', icon: '\uD83D\uDD17', label: 'Webhook aufrufen', visual: miniWebhook },
+        { id: 'github_issue', icon: '\uD83D\uDCDD', label: 'GitHub Issue', visual: miniGhIssue },
+        { id: 'shell', icon: '\u26A1', label: 'Shell-Befehl', visual: () => miniTerminal('deploy.sh') },
+        { id: 'trigger_agent', icon: '\uD83D\uDD04', label: 'Anderen Agent triggern', visual: miniChainTrigger }
+      ]
+    },
+    {
+      id: 'approval',
+      label: 'Genehmigung noetig?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: 'auto', icon: '\u2705', label: 'Automatisch', visual: miniSilence },
+        { id: 'ask', icon: '\uD83D\uDCAC', label: 'Erst per Telegram fragen', visual: miniTelegram },
+        { id: 'log', icon: '\uD83D\uDCCB', label: 'Nur loggen', visual: () => miniJson(`<span class="key">"logged"</span>: <span class="str">"true"</span>`) }
+      ]
+    }
+  ],
+  present: [
+    {
+      id: 'what',
+      label: 'Was zeigen?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: 'dashboard', icon: '\uD83D\uDCCA', label: 'Daten-Dashboard', visual: () => miniDashboardTheme('#0f172a', '#22d3ee', '#1e293b') },
+        { id: 'portal', icon: '\uD83C\uDFA8', label: 'Projekt-Portal', visual: () => miniDashboardTheme('#0a0a0a', '#ec4899', '#1a1a1a') },
+        { id: 'learning', icon: '\uD83D\uDCDA', label: 'Interaktive Lernumgebung', visual: () => miniDashboardTheme('#ffffff', '#2563eb', '#f0f4ff') }
+      ]
+    },
+    {
+      id: 'design',
+      label: 'Design waehlen',
+      type: 'themes',
+      options: [
+        { id: 'theme-clinical', name: 'Clinical', colors: { bg: '#ffffff', accent: '#2563eb', card: '#f8fafc', text: '#0f172a', textDim: '#475569' } },
+        { id: 'theme-dashboard', name: 'Dashboard', colors: { bg: '#0f172a', accent: '#22d3ee', card: '#1e293b', text: '#e2e8f0', textDim: '#94a3b8' } },
+        { id: 'theme-magazine', name: 'Magazine', colors: { bg: '#fefce8', accent: '#b45309', card: '#fffbeb', text: '#1c1917', textDim: '#78716c' } },
+        { id: 'theme-minimal', name: 'Minimal', colors: { bg: '#ffffff', accent: '#000000', card: '#f5f5f5', text: '#000', textDim: '#666' } },
+        { id: 'theme-cinematic', name: 'Cinematic', colors: { bg: '#0a0a0a', accent: '#ec4899', card: '#171717', text: '#fafafa', textDim: '#a1a1aa' } },
+        { id: 'theme-report', name: 'Report', colors: { bg: '#ffffff', accent: '#475569', card: '#f1f5f9', text: '#0f172a', textDim: '#64748b' } }
+      ]
+    },
+    {
+      id: 'components',
+      label: 'Welche Komponenten?',
+      type: 'cards-multi',
+      gridClass: '',
+      options: [
+        { id: 'charts', icon: '\uD83D\uDCC8', label: 'Charts', visual: () => miniLineChart('#8B5CF6') },
+        { id: 'tables', icon: '\uD83D\uDCCA', label: 'Tabellen', visual: () => miniJson(`<span class="key">"rows"</span>: <span class="num">42</span>`) },
+        { id: 'maps', icon: '\uD83D\uDDFA', label: 'Karten', visual: miniHeatmap },
+        { id: 'genome', icon: '\uD83E\uDDEC', label: 'Genom-Tracks', visual: miniGenomTracks },
+        { id: 'network', icon: '\uD83D\uDD78', label: 'Netzwerk-Graphen', visual: miniNetwork }
+      ]
+    }
+  ],
+  remind: [
+    {
+      id: 'what',
+      label: 'Worauf wartest du?',
+      type: 'field',
+      fieldConfig: { name: 'reminderText', placeholder: 'z.B. "Kursanmeldung wird freigeschaltet" oder "Neues Paper zu meinem Thema"', type: 'textarea' }
+    },
+    {
+      id: 'where',
+      label: 'Wo kann man das pruefen?',
+      type: 'cards',
+      gridClass: 'wide',
+      options: [
+        { id: 'url', icon: '\uD83C\uDF10', label: 'Webseite regelmaessig pruefen', visual: () => miniBrowser('https://...', '<div class="mini-browser-line" style="width:60%"></div>'), field: { name: 'reminderUrl', placeholder: 'https://...', type: 'text' } },
+        { id: 'api', icon: '\uD83D\uDD0C', label: 'API-Endpunkt abfragen', visual: () => miniJson(`<span class="key">"open"</span>: <span class="bool">false</span>`), field: { name: 'reminderUrl', placeholder: 'https://api...', type: 'text' } },
+        { id: 'feed', icon: '\uD83D\uDCF0', label: 'Feed beobachten', visual: miniFeed, field: { name: 'reminderUrl', placeholder: 'https://.../feed.xml', type: 'text' } }
+      ]
+    },
+    {
+      id: 'how',
+      label: 'Wie erkennt der Agent dass es passiert ist?',
+      type: 'cards',
+      gridClass: 'wide',
+      options: [
+        { id: 'llm', icon: '\uD83E\uDDE0', label: 'KI liest die Seite und entscheidet', visual: miniAiChat },
+        { id: 'contains', icon: '\uD83D\uDCDD', label: 'Bestimmter Text taucht auf', visual: miniPageHighlight, field: { name: 'searchText', placeholder: 'z.B. "Anmeldung offen"', type: 'text' } },
+        { id: 'changed', icon: '\uD83D\uDD04', label: 'Irgendeine Aenderung auf der Seite', visual: miniDiff }
+      ]
+    },
+    {
+      id: 'silence',
+      label: 'Was tun solange nichts passiert?',
+      type: 'cards',
+      gridClass: 'wide',
+      options: [
+        { id: 'confirm_daily', icon: '\u2705', label: 'Taeglich bestaetigen: "Tracker laeuft, noch keine Aenderung"', visual: miniSilence },
+        { id: 'confirm_weekly', icon: '\uD83D\uDCC6', label: 'Woechentlich bestaetigen', visual: miniSilence },
+        { id: 'quiet', icon: '\uD83D\uDD07', label: 'Nur melden wenn es passiert', visual: () => miniStarter('\uD83D\uDD15', 'Stille', '#94a3b8') }
+      ]
+    },
+    {
+      id: 'schedule',
+      label: 'Wie oft pruefen?',
+      type: 'cards',
+      gridClass: '',
+      options: [
+        { id: '5min', icon: '\u26A1', label: 'Alle 5 Min', visual: () => miniTimelineDots(20, 3), cron: '*/5 * * * *' },
+        { id: 'hourly', icon: '\u23F0', label: 'Stuendlich', visual: () => miniClockFace(0, 0), cron: '0 * * * *' },
+        { id: 'daily', icon: '\uD83D\uDCC5', label: 'Taeglich', visual: () => miniClockFace(240, 0), cron: '0 8 * * *' }
+      ]
+    },
+    {
+      id: 'notify',
+      label: 'Wohin benachrichtigen wenn es eintritt?',
+      type: 'cards-multi',
+      gridClass: '',
+      options: [
+        { id: 'telegram', icon: '\uD83D\uDCAC', label: 'Telegram', visual: miniTelegram },
+        { id: 'email', icon: '\uD83D\uDCE7', label: 'Email', visual: miniEmailCard },
+        { id: 'slack', icon: '\uD83D\uDCBC', label: 'Slack', visual: miniSlack },
+        { id: 'discord', icon: '\uD83C\uDFAE', label: 'Discord', visual: miniDiscord }
+      ]
+    }
+  ]
+};
+
+// ─── EXTRA BLOCKS FOR EXPANDED OPTIONS ──────────────────────
+
+const EXTRA_BLOCK_CATEGORIES = [
   {
     id: 'sources', name: 'Quellen', icon: '\uD83D\uDCE1',
     blocks: [
-      { id: 'src-url', name: 'URL / Webseite', desc: 'HTML-Seite abrufen', configKey: 'source',
-        fields: [{ name: 'url', label: 'URL', type: 'url', placeholder: 'https://vhs-hamburg.de/kurse' }],
-        visual: () => miniBrowser('https://...', '<div class="mini-browser-line" style="width:80%"></div><div class="mini-browser-line" style="width:60%"></div><div class="mini-browser-line" style="width:70%"></div>') },
-      { id: 'src-api', name: 'REST API', desc: 'JSON API abfragen',
-        fields: [{ name: 'url', label: 'API URL', type: 'url', placeholder: 'https://api.example.com/data' }, { name: 'method', label: 'Methode', type: 'select', options: ['GET', 'POST'] }],
-        visual: () => miniJson(`{<br>&nbsp;&nbsp;<span class="key">"status"</span>: <span class="str">"ok"</span>,<br>&nbsp;&nbsp;<span class="key">"data"</span>: [<span class="num">...</span>]<br>}`) },
-      { id: 'src-graphql', name: 'GraphQL API', desc: 'GraphQL-Abfrage',
-        fields: [{ name: 'url', label: 'Endpoint', type: 'url', placeholder: 'https://api.example.com/graphql' }, { name: 'query', label: 'Query', type: 'textarea', placeholder: '{ user { name } }' }],
-        visual: miniGraphql },
-      { id: 'src-rss', name: 'RSS / Atom Feed', desc: 'Feed-Eintraege ueberwachen',
-        fields: [{ name: 'url', label: 'Feed URL', type: 'url', placeholder: 'https://example.com/feed.xml' }],
-        visual: miniFeed },
-      { id: 'src-imap', name: 'Email-Postfach', desc: 'IMAP Inbox lesen',
-        fields: [{ name: 'host', label: 'IMAP Host', placeholder: 'imap.gmail.com' }, { name: 'user', label: 'Benutzer', placeholder: 'user@example.com' }],
-        visual: miniInbox },
-      { id: 'src-pubmed', name: 'PubMed', desc: 'Biomedizinische Literatur',
-        fields: [{ name: 'query', label: 'Suchbegriff', placeholder: 'structural variants' }],
-        visual: miniPubmed },
-      { id: 'src-clinvar', name: 'ClinVar', desc: 'Varianten-Datenbank',
-        fields: [{ name: 'gene', label: 'Gen', placeholder: 'BRCA1' }],
-        visual: miniClinvar },
-      { id: 'src-github', name: 'GitHub API', desc: 'Repos, Issues, PRs',
-        fields: [{ name: 'repo', label: 'Repository', placeholder: 'user/repo' }],
-        visual: miniGithubCard },
-      { id: 'src-aws', name: 'AWS CloudWatch', desc: 'Metriken + Logs',
-        fields: [{ name: 'metric', label: 'Metrik', placeholder: 'CPUUtilization' }, { name: 'region', label: 'Region', placeholder: 'eu-central-1' }],
-        visual: miniAwsCloud },
-      { id: 'src-s3', name: 'S3 Bucket', desc: 'Dateien aus S3 lesen',
-        fields: [{ name: 'bucket', label: 'Bucket' }, { name: 'key', label: 'Key/Prefix' }],
-        visual: miniS3 },
-      { id: 'src-db', name: 'PostgreSQL / SQLite', desc: 'SQL-Datenbank abfragen',
-        fields: [{ name: 'connection', label: 'Connection String', placeholder: 'postgres://...' }, { name: 'query', label: 'SQL', type: 'textarea' }],
-        visual: miniDatabase },
-      { id: 'src-webhook-in', name: 'Webhook (eingehend)', desc: 'POST-Requests empfangen',
-        fields: [{ name: 'secret', label: 'Shared Secret' }],
-        visual: miniWebhookIn },
+      { id: 'src-url', name: 'URL / Webseite', desc: 'HTML-Seite abrufen', visual: () => miniBrowser('https://...', '<div class="mini-browser-line" style="width:80%"></div>') },
+      { id: 'src-api', name: 'REST API', desc: 'JSON API abfragen', visual: () => miniJson(`{<br>&nbsp;&nbsp;<span class="key">"status"</span>: <span class="str">"ok"</span><br>}`) },
+      { id: 'src-graphql', name: 'GraphQL API', desc: 'GraphQL-Abfrage', visual: miniGraphql },
+      { id: 'src-rss', name: 'RSS / Atom Feed', desc: 'Feed-Eintraege', visual: miniFeed },
+      { id: 'src-imap', name: 'Email-Postfach', desc: 'IMAP Inbox lesen', visual: miniInbox },
+      { id: 'src-pubmed', name: 'PubMed', desc: 'Biomedizinische Literatur', visual: miniPubmed },
+      { id: 'src-clinvar', name: 'ClinVar', desc: 'Varianten-Datenbank', visual: miniClinvar },
+      { id: 'src-github', name: 'GitHub API', desc: 'Repos, Issues, PRs', visual: miniGithubCard },
+      { id: 'src-aws', name: 'AWS CloudWatch', desc: 'Metriken + Logs', visual: miniAwsCloud },
+      { id: 'src-db', name: 'PostgreSQL / SQLite', desc: 'SQL-Datenbank', visual: miniDatabase },
+      { id: 'src-webhook-in', name: 'Webhook (eingehend)', desc: 'POST empfangen', visual: miniWebhookIn }
     ]
   },
   {
-    id: 'conditions', name: 'Wenn', icon: '\uD83D\uDD0D',
+    id: 'conditions', name: 'Bedingungen', icon: '\uD83D\uDD0D',
     blocks: [
-      { id: 'cond-contains', name: 'Text-Suche', desc: '"freie Plaetze" taucht auf',
-        fields: [{ name: 'value', label: 'Suchtext', placeholder: 'freie Plaetze' }],
-        visual: miniPageHighlight },
-      { id: 'cond-regex', name: 'Regex', desc: 'Regulaerer Ausdruck',
-        fields: [{ name: 'regex', label: 'Pattern', placeholder: 'Preis:\\s*\\d+' }],
-        visual: miniRegex },
-      { id: 'cond-css', name: 'HTML-Element', desc: 'CSS-Selector erscheint',
-        fields: [{ name: 'selector', label: 'CSS Selector', placeholder: '.registration-open' }],
-        visual: miniDomTree },
-      { id: 'cond-json', name: 'JSON-Wert', desc: 'API-Feld pruefen',
-        fields: [{ name: 'path', label: 'JSON Path', placeholder: '$.data.status' }, { name: 'value', label: 'Erwarteter Wert', placeholder: 'open' }],
-        visual: miniJsonPath },
-      { id: 'cond-threshold', name: 'Schwellwert', desc: 'Wert ueber/unter X',
-        fields: [{ name: 'path', label: 'Pfad' }, { name: 'operator', label: 'Operator', type: 'select', options: ['>', '<', '>=', '<=', '=='] }, { name: 'value', label: 'Grenzwert', type: 'number' }],
-        visual: () => miniThresholdChart('#ef4444') },
-      { id: 'cond-rss', name: 'Neue Feed-Eintraege', desc: 'Neue Items im RSS',
-        visual: miniRssNew },
-      { id: 'cond-llm', name: 'KI-Frage', desc: 'Natuerliche Sprache (~$0.001)',
-        fields: [{ name: 'question', label: 'Frage', type: 'textarea', placeholder: 'Ist die Anmeldung geoeffnet?' }],
-        visual: miniAiChat },
-      { id: 'cond-changed', name: 'Aenderung erkannt', desc: 'Irgendwas aendert sich',
-        visual: miniDiff },
-      { id: 'cond-stale', name: 'Alter pruefen', desc: 'Daten aelter als X Stunden',
-        fields: [{ name: 'max_age_hours', label: 'Max. Alter (h)', type: 'number', placeholder: '24' }],
-        visual: miniStale },
-      { id: 'cond-schema', name: 'JSON-Schema Check', desc: 'Struktur-Validierung',
-        fields: [{ name: 'schema', label: 'Schema', type: 'textarea' }],
-        visual: miniSchema },
-      { id: 'cond-structdiff', name: 'Strukturelle Aenderung', desc: 'min_changes Items anders',
-        fields: [{ name: 'min_changes', label: 'Mindest-Aenderungen', type: 'number', placeholder: '5' }],
-        visual: miniStructDiff },
-      { id: 'cond-deadline', name: 'Frist / Deadline', desc: 'Datum erreicht',
-        fields: [{ name: 'date', label: 'Datum', type: 'text', placeholder: '2026-12-31' }, { name: 'remind_days', label: 'Erinnern (Tage vorher)', placeholder: '30,14,7,1' }],
-        visual: miniDeadline },
+      { id: 'cond-contains', name: 'Text-Suche', desc: 'Text taucht auf', visual: miniPageHighlight },
+      { id: 'cond-regex', name: 'Regex', desc: 'Regulaerer Ausdruck', visual: miniRegex },
+      { id: 'cond-css', name: 'HTML-Element', desc: 'CSS-Selector', visual: miniDomTree },
+      { id: 'cond-json', name: 'JSON-Wert', desc: 'API-Feld pruefen', visual: miniJsonPath },
+      { id: 'cond-threshold', name: 'Schwellwert', desc: 'Wert ueber/unter X', visual: () => miniThresholdChart('#ef4444') },
+      { id: 'cond-llm', name: 'KI-Frage', desc: 'Natuerliche Sprache', visual: miniAiChat },
+      { id: 'cond-changed', name: 'Aenderung erkannt', desc: 'Irgendwas aendert sich', visual: miniDiff },
+      { id: 'cond-deadline', name: 'Frist / Deadline', desc: 'Datum erreicht', visual: miniDeadline }
     ]
   },
   {
-    id: 'schedule', name: 'Zeitplan', icon: '\u23F0',
+    id: 'actions', name: 'Aktionen', icon: '\u26A1',
     blocks: [
-      { id: 'sched-5min', name: 'Alle 5 Minuten', desc: 'Sehr haeufig', cron: '*/5 * * * *',
-        visual: () => miniTimelineDots(20, 3) },
-      { id: 'sched-15min', name: 'Alle 15 Minuten', desc: 'Haeufig', cron: '*/15 * * * *',
-        visual: () => miniTimelineDots(16, 2) },
-      { id: 'sched-hourly', name: 'Stuendlich', desc: 'Jede volle Stunde', cron: '0 * * * *',
-        visual: () => miniClockFace(0, 0) },
-      { id: 'sched-3h', name: 'Alle 3 Stunden', desc: '8x pro Tag', cron: '0 */3 * * *',
-        visual: () => miniClockFace(90, 0) },
-      { id: 'sched-daily-morning', name: 'Taeglich 8 Uhr', desc: 'Morgens', cron: '0 8 * * *',
-        visual: () => miniClockFace(240, 0) },
-      { id: 'sched-daily-evening', name: 'Taeglich 20 Uhr', desc: 'Abends', cron: '0 20 * * *',
-        visual: () => miniClockFace(600, 0) },
-      { id: 'sched-weekly', name: 'Woechentlich (Mo)', desc: 'Montag 8 Uhr', cron: '0 8 * * 1',
-        visual: () => miniWeekStrip(0) },
-      { id: 'sched-monthly', name: 'Monatlich (1.)', desc: '1. des Monats', cron: '0 8 1 * *',
-        visual: () => miniCalendar(1) },
-    ]
-  },
-  {
-    id: 'notify', name: 'Melden', icon: '\uD83D\uDD14',
-    blocks: [
-      { id: 'notify-telegram', name: 'Telegram', desc: 'Bot-Nachricht',
-        fields: [{ name: 'bot_token', label: 'Bot Token', placeholder: '123456:ABC-DEF...' }, { name: 'chat_id', label: 'Chat ID', placeholder: '-100123456789' }],
-        visual: miniTelegram },
-      { id: 'notify-discord', name: 'Discord', desc: 'Webhook',
-        fields: [{ name: 'webhook_url', label: 'Webhook URL', type: 'url' }],
-        visual: miniDiscord },
-      { id: 'notify-slack', name: 'Slack', desc: 'Webhook',
-        fields: [{ name: 'webhook_url', label: 'Webhook URL', type: 'url' }],
-        visual: miniSlack },
-      { id: 'notify-email', name: 'Email (SMTP)', desc: 'Email senden',
-        fields: [{ name: 'to', label: 'Empfaenger', placeholder: 'user@example.com' }, { name: 'smtp_host', label: 'SMTP Host', placeholder: 'smtp.gmail.com' }],
-        visual: miniEmailCard },
-      { id: 'notify-webhook', name: 'Webhook', desc: 'HTTP POST',
-        fields: [{ name: 'url', label: 'URL', type: 'url' }],
-        visual: miniWebhook },
-      { id: 'notify-matrix', name: 'Matrix', desc: 'Matrix-Raum',
-        fields: [{ name: 'room', label: 'Room', placeholder: '#alerts:matrix.org' }],
-        visual: miniMatrix },
-      { id: 'notify-silence', name: 'Stille-Bestaetigung', desc: '"Alles ruhig"',
-        visual: miniSilence },
-    ]
-  },
-  {
-    id: 'actions', name: 'Dann', icon: '\u26A1',
-    blocks: [
-      { id: 'act-webhook', name: 'Webhook aufrufen', desc: 'HTTP POST',
-        fields: [{ name: 'url', label: 'URL', type: 'url' }, { name: 'body', label: 'Body', type: 'textarea' }],
-        visual: miniWebhook },
-      { id: 'act-github-issue', name: 'GitHub Issue', desc: 'Issue erstellen',
-        fields: [{ name: 'repo', label: 'Repo', placeholder: 'user/repo' }, { name: 'title', label: 'Titel' }],
-        visual: miniGhIssue },
-      { id: 'act-github-pr', name: 'GitHub PR', desc: 'Pull Request erstellen',
-        fields: [{ name: 'repo', label: 'Repo' }, { name: 'branch', label: 'Branch' }],
-        visual: miniGhPr },
-      { id: 'act-github-comment', name: 'GitHub Comment', desc: 'Kommentar hinzufuegen',
-        fields: [{ name: 'repo', label: 'Repo' }, { name: 'issue', label: 'Issue/PR Nr.' }],
-        visual: miniGhComment },
-      { id: 'act-shell', name: 'Shell-Befehl', desc: 'Command ausfuehren',
-        fields: [{ name: 'command', label: 'Befehl', placeholder: 'echo "done"' }],
-        visual: () => miniTerminal('echo "done"') },
-      { id: 'act-s3', name: 'Nach S3 pushen', desc: 'Daten in S3-Bucket',
-        fields: [{ name: 'bucket', label: 'Bucket' }, { name: 'key', label: 'Key' }],
-        visual: miniCloudUpload },
-      { id: 'act-publish', name: 'API veroeffentlichen', desc: 'JSON auf Pages',
-        fields: [{ name: 'path', label: 'Pfad', placeholder: '/data.json' }],
-        visual: miniPublishApi },
-      { id: 'act-trigger', name: 'Nano-Zyrkel triggern', desc: 'Anderes Projekt',
-        fields: [{ name: 'repo', label: 'Repo' }],
-        visual: miniChainTrigger },
-      { id: 'act-cf-worker', name: 'Cloudflare Worker', desc: 'Worker aufrufen',
-        fields: [{ name: 'worker_url', label: 'Worker URL', type: 'url' }],
-        visual: miniCfWorker },
-    ]
-  },
-  {
-    id: 'gui', name: 'Design', icon: '\uD83C\uDFA8',
-    blocks: [
-      { id: 'theme-clinical', name: 'Clinical', desc: 'Medizinisch, blau/weiss',
-        colors: { bg: '#ffffff', accent: '#2563eb', card: '#f8fafc', text: '#0f172a', textDim: '#475569' },
-        visual: () => miniDashboardTheme('#ffffff', '#2563eb', '#f0f4ff') },
-      { id: 'theme-dashboard', name: 'Dashboard', desc: 'Dunkel, Neon',
-        colors: { bg: '#0f172a', accent: '#22d3ee', card: '#1e293b', text: '#e2e8f0', textDim: '#94a3b8' },
-        visual: () => miniDashboardTheme('#0f172a', '#22d3ee', '#1e293b') },
-      { id: 'theme-magazine', name: 'Magazine', desc: 'Editorial, warm',
-        colors: { bg: '#fefce8', accent: '#b45309', card: '#fffbeb', text: '#1c1917', textDim: '#78716c' },
-        visual: () => miniDashboardTheme('#fefce8', '#b45309', '#fff7d6') },
-      { id: 'theme-minimal', name: 'Minimal', desc: 'Schwarz/Weiss',
-        colors: { bg: '#ffffff', accent: '#000000', card: '#f5f5f5', text: '#000', textDim: '#666' },
-        visual: () => miniDashboardTheme('#ffffff', '#000000', '#f0f0f0') },
-      { id: 'theme-cinematic', name: 'Cinematic', desc: 'Dunkel, Gradient',
-        colors: { bg: '#0a0a0a', accent: '#ec4899', card: '#171717', text: '#fafafa', textDim: '#a1a1aa' },
-        visual: () => miniDashboardTheme('#0a0a0a', '#ec4899', '#1a1a1a') },
-      { id: 'theme-multipage', name: 'Multipage', desc: 'Mit Navigation',
-        colors: { bg: '#f8fafc', accent: '#8b5cf6', card: '#ffffff', text: '#0f172a', textDim: '#64748b' },
-        visual: () => miniDashboardTheme('#f8fafc', '#8b5cf6', '#ffffff') },
-      { id: 'theme-report', name: 'Report', desc: 'Formal, strukturiert',
-        colors: { bg: '#ffffff', accent: '#475569', card: '#f1f5f9', text: '#0f172a', textDim: '#64748b' },
-        visual: () => miniDashboardTheme('#ffffff', '#475569', '#f1f5f9') },
-      { id: 'theme-cardgrid', name: 'Card Grid', desc: 'Karten-Layout',
-        colors: { bg: '#0b0d12', accent: '#8b5cf6', card: '#161a24', text: '#e2e8f0', textDim: '#94a3b8' },
-        visual: () => miniDashboardTheme('#0b0d12', '#8b5cf6', '#161a24') },
+      { id: 'act-webhook', name: 'Webhook aufrufen', desc: 'HTTP POST', visual: miniWebhook },
+      { id: 'act-github-issue', name: 'GitHub Issue', desc: 'Issue erstellen', visual: miniGhIssue },
+      { id: 'act-github-pr', name: 'GitHub PR', desc: 'Pull Request', visual: miniGhPr },
+      { id: 'act-shell', name: 'Shell-Befehl', desc: 'Command ausfuehren', visual: () => miniTerminal('echo "done"') },
+      { id: 'act-s3', name: 'Nach S3 pushen', desc: 'Daten in S3', visual: miniCloudUpload },
+      { id: 'act-publish', name: 'API veroeffentlichen', desc: 'JSON auf Pages', visual: miniPublishApi },
+      { id: 'act-trigger', name: 'Nano-Zyrkel triggern', desc: 'Anderes Projekt', visual: miniChainTrigger },
+      { id: 'act-cf-worker', name: 'Cloudflare Worker', desc: 'Worker aufrufen', visual: miniCfWorker }
     ]
   },
   {
     id: 'compute', name: 'Berechnung', icon: '\u2699\uFE0F',
     blocks: [
-      { id: 'feat-data', name: 'DataLoader + Filter', desc: 'Laden, Filtern, Aggregieren', wasmFeature: 'data',
-        visual: () => miniJson(`<span class="key">"filter"</span>: <span class="str">"gene=TP53"</span><br><span class="key">"rows"</span>: <span class="num">4,412,108</span>`) },
-      { id: 'feat-viz-basic', name: 'Charts (Line / Bar / Donut)', desc: 'Basis-Visualisierungen', wasmFeature: 'viz-basic',
-        visual: () => miniLineChart('#8B5CF6') },
-      { id: 'feat-viz-advanced', name: 'Charts (Heatmap / Scatter)', desc: 'Erweiterte Visualisierungen', wasmFeature: 'viz-advanced',
-        visual: miniHeatmap },
-      { id: 'feat-viz-spatial', name: 'Genom-Tracks + Karten', desc: 'LinearTrack, WorldMap', wasmFeature: 'viz-spatial',
-        visual: miniGenomTracks },
-      { id: 'feat-network', name: 'Netzwerk-Graph', desc: 'Force-directed Graphen', wasmFeature: 'viz-spatial',
-        visual: miniNetwork },
-      { id: 'feat-survival', name: 'Survival-Kurven', desc: 'Kaplan-Meier', wasmFeature: 'viz-advanced',
-        visual: miniSurvival },
-      { id: 'feat-plugin', name: 'Custom Rust Plugin', desc: 'Eigene Logik, WASM',
-        visual: miniRustCode },
+      { id: 'feat-data', name: 'DataLoader + Filter', desc: 'Laden, Filtern, Aggregieren', visual: () => miniJson(`<span class="key">"filter"</span>: <span class="str">"gene=TP53"</span>`) },
+      { id: 'feat-viz-basic', name: 'Charts (Line/Bar/Donut)', desc: 'Basis-Visualisierungen', visual: () => miniLineChart('#8B5CF6') },
+      { id: 'feat-viz-advanced', name: 'Charts (Heatmap/Scatter)', desc: 'Erweiterte Visualisierungen', visual: miniHeatmap },
+      { id: 'feat-viz-spatial', name: 'Genom-Tracks + Karten', desc: 'LinearTrack, WorldMap', visual: miniGenomTracks },
+      { id: 'feat-network', name: 'Netzwerk-Graph', desc: 'Force-directed Graphen', visual: miniNetwork },
+      { id: 'feat-survival', name: 'Survival-Kurven', desc: 'Kaplan-Meier', visual: miniSurvival },
+      { id: 'feat-plugin', name: 'Custom Rust Plugin', desc: 'Eigene Logik, WASM', visual: miniRustCode }
     ]
   }
 ];
 
-// Flat lookup
-const BLOCK_MAP = {};
-CATEGORIES.forEach(cat => cat.blocks.forEach(b => { b.category = cat.id; BLOCK_MAP[b.id] = b; }));
-
-// ─── STATE ───────────────────────────────────────────────────
+// ─── STATE ──────────────────────────────────────────────────
 
 const state = {
-  activeCategory: 'showcase',
-  blocks: [],
-  blockConfig: {},
+  intent: null,
+  answers: {},
+  fieldValues: {},
   design: null,
-  title: 'Mein nano-zyrkel',
+  extraBlocks: [],
+  extraConfig: {},
+  title: 'Mein Agent',
   codeVisible: false,
   activeTab: 'config',
   zyrkelPort: null,
   chatOpen: false,
+  expandedOptions: false,
+  reminderChips: {}
 };
 
-// ─── DOM REFS ────────────────────────────────────────────────
+// ─── DOM REFS ───────────────────────────────────────────────
 
-const $dropBtn = document.getElementById('bk-dropdown-btn');
-const $dropWrap = document.getElementById('bk-dropdown-wrap');
-const $dropList = document.getElementById('bk-dropdown-list');
-const $dropIcon = document.getElementById('bk-dropdown-icon');
-const $dropText = document.getElementById('bk-dropdown-text');
-const $dropCount = document.getElementById('bk-dropdown-count');
-const $grid = document.getElementById('baukasten-grid');
-const $searchInput = document.getElementById('search-input');
-const $canvas = document.getElementById('preview-canvas');
+const $intentPanel = document.getElementById('intent-panel');
+const $intentCards = document.getElementById('intent-cards');
+const $buildPanel = document.getElementById('build-panel');
 const $codeDrawer = document.getElementById('code-drawer');
 const $drawerCode = document.getElementById('drawer-code');
 const $nextSteps = document.getElementById('next-steps');
@@ -837,245 +927,286 @@ const $chatMessages = document.getElementById('chat-messages');
 const $chatInput = document.getElementById('chat-input');
 const $chatSend = document.getElementById('chat-send');
 
-// ─── HELPERS ─────────────────────────────────────────────────
+// ─── HELPERS ────────────────────────────────────────────────
 
 function escHtml(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function blocksOfType(prefix) {
-  return state.blocks.filter(id => id.startsWith(prefix));
-}
-
-function getDesignBlock() {
-  if (!state.design) return null;
-  return BLOCK_MAP[state.design];
+function getIntentDef(intentId) {
+  return INTENTS.find(i => i.id === intentId);
 }
 
 function getThemeColors() {
-  const d = getDesignBlock();
-  if (d && d.colors) return d.colors;
-  return { bg: '#0b0d12', accent: '#8B5CF6', card: '#161a24', text: '#e2e8f0', textDim: '#94a3b8' };
+  if (state.design) {
+    // Find in present question themes
+    const q = (QUESTIONS.present || []).find(q => q.type === 'themes');
+    if (q) {
+      const t = q.options.find(o => o.id === state.design);
+      if (t && t.colors) return t.colors;
+    }
+  }
+  return { bg: '#0f172a', accent: '#22d3ee', card: '#1e293b', text: '#e2e8f0', textDim: '#94a3b8' };
 }
 
-// ─── DROPDOWN ────────────────────────────────────────────────
-
-function updateDropdownButton() {
-  const cat = CATEGORIES.find(c => c.id === state.activeCategory);
-  if (!cat) return;
-  $dropIcon.textContent = cat.icon;
-  $dropText.textContent = cat.name;
-  const inUseCount = cat.blocks.filter(b => state.blocks.includes(b.id)).length;
-  $dropCount.textContent = inUseCount > 0 ? String(inUseCount) : '';
+function getActiveCron() {
+  const schedAnswer = state.answers.schedule;
+  if (!schedAnswer) return '0 * * * *';
+  const questions = QUESTIONS[state.intent] || [];
+  for (const q of questions) {
+    if (q.id === 'schedule') {
+      const opt = q.options.find(o => o.id === schedAnswer);
+      if (opt && opt.cron) return opt.cron;
+    }
+  }
+  return '0 * * * *';
 }
 
-function renderDropdownList() {
-  $dropList.innerHTML = '';
-  CATEGORIES.forEach(cat => {
-    const inUseCount = cat.blocks.filter(b => state.blocks.includes(b.id)).length;
-    const item = document.createElement('div');
-    item.className = 'bk-dropdown-item' + (cat.id === state.activeCategory ? ' active' : '');
-    item.innerHTML = `
-      <span class="bk-dropdown-item-icon">${cat.icon}</span>
-      <span class="bk-dropdown-item-name">${cat.name}</span>
-      <span class="bk-dropdown-item-count${inUseCount > 0 ? ' has-items' : ''}">${inUseCount > 0 ? inUseCount : cat.blocks.length}</span>
-    `;
-    item.addEventListener('click', () => {
-      state.activeCategory = cat.id;
-      closeDropdown();
-      updateDropdownButton();
-      renderGrid();
-    });
-    $dropList.appendChild(item);
-  });
+function getScheduleLabel() {
+  const schedAnswer = state.answers.schedule;
+  if (!schedAnswer) return null;
+  const questions = QUESTIONS[state.intent] || [];
+  for (const q of questions) {
+    if (q.id === 'schedule') {
+      const opt = q.options.find(o => o.id === schedAnswer);
+      if (opt) return opt.label;
+    }
+  }
+  return null;
 }
 
-function openDropdown() {
-  renderDropdownList();
-  $dropList.classList.remove('hidden');
-  $dropWrap.classList.add('open');
-}
+// ─── RENDER: INTENT PANEL (Layer 1) ─────────────────────────
 
-function closeDropdown() {
-  $dropList.classList.add('hidden');
-  $dropWrap.classList.remove('open');
-}
-
-$dropBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if ($dropList.classList.contains('hidden')) openDropdown();
-  else closeDropdown();
-});
-
-document.addEventListener('click', (e) => {
-  if (!$dropWrap.contains(e.target)) closeDropdown();
-});
-
-// ─── CATALOG GRID ────────────────────────────────────────────
-
-function renderGrid() {
-  $grid.innerHTML = '';
-  const cat = CATEGORIES.find(c => c.id === state.activeCategory);
-  if (!cat) return;
-
-  cat.blocks.forEach(block => {
-    const inUse = state.blocks.includes(block.id);
+function renderIntentPanel() {
+  $intentCards.innerHTML = '';
+  INTENTS.forEach(intent => {
     const card = document.createElement('div');
-    card.className = 'vcard' + (inUse ? ' in-use' : '');
-    card.dataset.blockId = block.id;
-    const visualHtml = block.visual ? block.visual() : '';
+    card.className = 'intent-card' + (state.intent === intent.id ? ' selected' : '');
     card.innerHTML = `
-      <div class="vcard-visual">${visualHtml}</div>
-      <div class="vcard-label">
-        <div class="vcard-name">${block.name}</div>
-        <div class="vcard-desc">${block.desc}</div>
+      <span class="intent-card-icon">${intent.icon}</span>
+      <div class="intent-card-body">
+        <div class="intent-card-question">${intent.question}</div>
+        <div class="intent-card-examples">${intent.examples}</div>
       </div>
     `;
-    card.addEventListener('click', () => { if (!inUse) addBlock(block.id); });
-    $grid.appendChild(card);
+    card.addEventListener('click', () => selectIntent(intent.id));
+    $intentCards.appendChild(card);
   });
 }
 
-$searchInput.addEventListener('input', () => {
-  const q = $searchInput.value.toLowerCase().trim();
-  if (q.length === 0) { renderGrid(); return; }
-  $grid.innerHTML = '';
-  CATEGORIES.forEach(cat => {
-    cat.blocks.forEach(block => {
-      const text = (block.name + ' ' + block.desc + ' ' + cat.name).toLowerCase();
-      if (!text.includes(q)) return;
-      const inUse = state.blocks.includes(block.id);
-      const card = document.createElement('div');
-      card.className = 'vcard' + (inUse ? ' in-use' : '');
-      card.innerHTML = `
-        <div class="vcard-visual">${block.visual ? block.visual() : ''}</div>
-        <div class="vcard-label">
-          <div class="vcard-name">${block.name}</div>
-          <div class="vcard-desc">${block.desc}</div>
-        </div>
-      `;
-      card.addEventListener('click', () => { if (!inUse) addBlock(block.id); });
-      $grid.appendChild(card);
-    });
-  });
-});
+// ─── SELECT INTENT ──────────────────────────────────────────
 
-// ─── ADD / REMOVE BLOCK ──────────────────────────────────────
+function selectIntent(intentId) {
+  if (state.intent === intentId) return;
+  state.intent = intentId;
+  state.answers = {};
+  state.fieldValues = {};
+  state.design = null;
+  state.extraBlocks = [];
+  state.extraConfig = {};
+  state.expandedOptions = false;
+  state.reminderChips = {};
 
-function addBlock(blockId) {
-  if (state.blocks.includes(blockId)) return;
-  const block = BLOCK_MAP[blockId];
-  if (!block) return;
+  const def = getIntentDef(intentId);
+  state.title = def ? def.title : 'Mein Agent';
 
-  // Starter templates: set design + auto-add sub-blocks
-  if (block.starter) {
-    if (block.design) state.design = block.design;
-    if (!state.blocks.includes(blockId)) {
-      state.blocks.push(blockId);
-      state.blockConfig[blockId] = {};
-    }
-    (block.autoBlocks || []).forEach(subId => {
-      if (!state.blocks.includes(subId)) {
-        state.blocks.push(subId);
-        state.blockConfig[subId] = {};
-      }
-    });
-    state.title = block.name;
-  }
-  // Theme blocks: set design
-  else if (blockId.startsWith('theme-')) {
-    // Remove previous theme
-    state.blocks = state.blocks.filter(id => !id.startsWith('theme-'));
-    state.blocks.push(blockId);
-    state.blockConfig[blockId] = {};
-    state.design = blockId;
-  }
-  // Schedule blocks: only one allowed
-  else if (blockId.startsWith('sched-')) {
-    state.blocks = state.blocks.filter(id => !id.startsWith('sched-'));
-    state.blocks.push(blockId);
-    state.blockConfig[blockId] = {};
-  }
-  // Everything else
-  else {
-    state.blocks.push(blockId);
-    state.blockConfig[blockId] = {};
-  }
-
-  renderAll();
-}
-
-function removeBlock(blockId) {
-  state.blocks = state.blocks.filter(id => id !== blockId);
-  delete state.blockConfig[blockId];
-  if (state.design === blockId) state.design = null;
-  if (blockId.startsWith('start-')) state.title = 'Mein nano-zyrkel';
-  renderAll();
-}
-window.removeBlock = removeBlock;
-
-function updateFieldValue(blockId, fieldName, value) {
-  if (!state.blockConfig[blockId]) state.blockConfig[blockId] = {};
-  state.blockConfig[blockId][fieldName] = value;
-  renderPreview();
-  if (state.codeVisible) renderCodeDrawer();
-}
-window.updateFieldValue = updateFieldValue;
-
-function updateTitle(newTitle) {
-  state.title = newTitle || 'Mein nano-zyrkel';
-  if (state.codeVisible) renderCodeDrawer();
-}
-window.updateTitle = updateTitle;
-
-// ─── RENDER ALL ──────────────────────────────────────────────
-
-function renderAll() {
-  updateDropdownButton();
-  renderGrid();
-  renderPreview();
+  renderIntentPanel();
+  renderBuildPanel();
   if (state.codeVisible) renderCodeDrawer();
 }
 
-// ─── LIVE PREVIEW: The Product Canvas ────────────────────────
+// ─── RENDER: BUILD PANEL ────────────────────────────────────
 
-function renderPreview() {
-  if (state.blocks.length === 0) {
+function renderBuildPanel() {
+  if (!state.intent) {
     renderEmptyState();
     return;
   }
-  const colors = getThemeColors();
-  // Apply theme as CSS variables on canvas
-  $canvas.style.setProperty('--pv-bg', colors.bg);
-  $canvas.style.setProperty('--pv-accent', colors.accent);
-  $canvas.style.setProperty('--pv-card', colors.card);
-  $canvas.style.setProperty('--pv-text', colors.text);
-  $canvas.style.setProperty('--pv-text-dim', colors.textDim);
+  if (state.intent === 'blank') {
+    renderBlankCanvas();
+    return;
+  }
 
-  renderDashboardPreview();
+  let html = '';
+
+  // Layer 3: Live preview (builds as answers accumulate)
+  html += renderPreview();
+
+  // Layer 2: Questions
+  html += renderQuestions(state.intent);
+
+  // Expanded options
+  html += renderExpandedOptions();
+
+  $buildPanel.innerHTML = html;
+  wireUpBuildPanel();
 }
 
+// ─── RENDER: EMPTY STATE ────────────────────────────────────
+
 function renderEmptyState() {
-  $canvas.innerHTML = `
-    <div class="pv-empty">
-      <div class="pv-empty-icon">&#x2B21;</div>
-      <h2>Starte mit einer Vorlage</h2>
-      <p>Waehle links im Dropdown <b>Start</b> und klicke eine Vorlage an — oder baue deinen nano-zyrkel Baustein fuer Baustein aus den anderen Kategorien zusammen.</p>
+  $buildPanel.innerHTML = `
+    <div class="bp-empty">
+      <div class="bp-empty-icon">&#x2B21;</div>
+      <h2>Was willst du erreichen?</h2>
+      <p>Waehle links einen Typ aus — oder klicke auf "Ich weiss was ich tue" fuer einen leeren Baukasten.</p>
     </div>
   `;
 }
 
-function renderDashboardPreview() {
-  const sources = blocksOfType('src-');
-  const conditions = blocksOfType('cond-');
-  const schedules = blocksOfType('sched-');
-  const notifies = blocksOfType('notify-');
-  const actions = blocksOfType('act-');
-  const computes = blocksOfType('feat-');
+// ─── RENDER: BLANK CANVAS ───────────────────────────────────
 
-  const schedLabel = schedules.length > 0 ? BLOCK_MAP[schedules[0]].name : null;
+function renderBlankCanvas() {
+  let html = renderPreview();
+  html += renderExpandedOptions();
+  $buildPanel.innerHTML = html;
+  wireUpBuildPanel();
+  // Auto-open expanded options for blank canvas
+  const expOpt = $buildPanel.querySelector('.expanded-options');
+  if (expOpt) {
+    expOpt.classList.add('open');
+    state.expandedOptions = true;
+  }
+}
 
-  let html = `<div class="pv-dashboard">`;
+// ─── RENDER: QUESTIONS (Layer 2) ────────────────────────────
+
+function renderQuestions(intentId) {
+  const questions = QUESTIONS[intentId];
+  if (!questions) return '';
+
+  let html = '<div class="questions-section">';
+
+  questions.forEach(q => {
+    html += '<div class="question-group">';
+    html += `<div class="question-label">${q.label}</div>`;
+
+    if (q.type === 'cards' || q.type === 'cards-multi') {
+      html += renderAnswerCards(q);
+    } else if (q.type === 'field') {
+      html += renderFieldQuestion(q);
+    } else if (q.type === 'themes') {
+      html += renderThemeCards(q);
+    } else if (q.type === 'toggle-chips') {
+      html += renderToggleChips(q);
+    }
+
+    html += '</div>';
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function renderAnswerCards(q) {
+  const isMulti = q.type === 'cards-multi';
+  const selected = state.answers[q.id];
+  const selectedMulti = isMulti ? (Array.isArray(selected) ? selected : []) : [];
+
+  let html = `<div class="answer-grid ${q.gridClass || ''}">`;
+
+  q.options.forEach(opt => {
+    const isSel = isMulti ? selectedMulti.includes(opt.id) : selected === opt.id;
+    const visualHtml = opt.visual ? (typeof opt.visual === 'function' ? opt.visual() : opt.visual) : '';
+
+    html += `<div class="answer-card${isSel ? ' selected' : ''}" data-question="${q.id}" data-answer="${opt.id}" data-multi="${isMulti}">`;
+    if (visualHtml) {
+      html += `<div class="answer-card-visual">${visualHtml}</div>`;
+    } else {
+      html += `<span class="answer-card-icon">${opt.icon}</span>`;
+    }
+    html += `<div class="answer-card-label">${opt.label}</div>`;
+
+    // Inline field if selected and has field config
+    if (isSel && opt.field) {
+      html += renderInlineField(opt.field, q.id);
+    }
+
+    html += '</div>';
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function renderInlineField(fieldCfg, questionId) {
+  const val = state.fieldValues[fieldCfg.name] || '';
+
+  if (fieldCfg.type === 'threshold') {
+    const op = state.fieldValues.thresholdOp || '>';
+    const thVal = state.fieldValues.thresholdVal || '';
+    return `<div class="answer-inline-field" onclick="event.stopPropagation()">
+      <div class="threshold-row">
+        <span class="threshold-label">Wenn Wert</span>
+        <select data-field-name="thresholdOp" class="inline-field-input">
+          ${['>', '<', '>=', '<=', '=='].map(o => `<option value="${o}" ${op === o ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+        <input type="number" data-field-name="thresholdVal" class="inline-field-input" value="${escHtml(thVal)}" placeholder="Grenzwert">
+      </div>
+    </div>`;
+  }
+  if (fieldCfg.type === 'textarea') {
+    return `<div class="answer-inline-field" onclick="event.stopPropagation()">
+      <textarea class="answer-inline-input inline-field-input" data-field-name="${fieldCfg.name}" placeholder="${escHtml(fieldCfg.placeholder || '')}">${escHtml(val)}</textarea>
+    </div>`;
+  }
+  if (fieldCfg.type === 'date') {
+    return `<div class="answer-inline-field" onclick="event.stopPropagation()">
+      <div class="date-picker-row">
+        <input type="date" class="inline-field-input" data-field-name="${fieldCfg.name}" value="${escHtml(val)}">
+      </div>
+    </div>`;
+  }
+  return `<div class="answer-inline-field" onclick="event.stopPropagation()">
+    <input class="answer-inline-input inline-field-input" type="text" data-field-name="${fieldCfg.name}" value="${escHtml(val)}" placeholder="${escHtml(fieldCfg.placeholder || '')}">
+  </div>`;
+}
+
+function renderFieldQuestion(q) {
+  const val = state.fieldValues[q.fieldConfig.name] || '';
+  if (q.fieldConfig.type === 'textarea') {
+    return `<textarea class="answer-inline-input inline-field-input" data-field-name="${q.fieldConfig.name}" placeholder="${escHtml(q.fieldConfig.placeholder || '')}">${escHtml(val)}</textarea>`;
+  }
+  return `<input class="answer-inline-input inline-field-input" type="text" data-field-name="${q.fieldConfig.name}" value="${escHtml(val)}" placeholder="${escHtml(q.fieldConfig.placeholder || '')}">`;
+}
+
+function renderThemeCards(q) {
+  let html = '<div class="answer-grid">';
+  q.options.forEach(opt => {
+    const isSel = state.design === opt.id;
+    const c = opt.colors;
+    html += `<div class="theme-card${isSel ? ' selected' : ''}" data-theme-id="${opt.id}">
+      <div class="theme-card-preview">${miniDashboardTheme(c.bg, c.accent, c.card)}</div>
+      <div class="theme-card-name">${opt.name}</div>
+    </div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderToggleChips(q) {
+  let html = '<div class="toggle-chips">';
+  q.options.forEach(opt => {
+    const isActive = !!state.reminderChips[opt.id];
+    html += `<button class="toggle-chip${isActive ? ' active' : ''}" data-chip-id="${opt.id}" data-question="${q.id}">${opt.label}</button>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+// ─── RENDER: LIVE PREVIEW (Layer 3) ─────────────────────────
+
+function renderPreview() {
+  const hasAnswers = Object.keys(state.answers).length > 0 || state.intent === 'blank';
+  if (!hasAnswers && state.intent !== 'blank') return '';
+
+  const colors = getThemeColors();
+  const schedLabel = getScheduleLabel();
+  const srcUrl = state.fieldValues.url || state.fieldValues.valuePath || state.fieldValues.reminderUrl || 'https://example.com';
+  const condText = state.fieldValues.searchText || state.fieldValues.question || state.fieldValues.selector || state.fieldValues.reminderText || 'Aenderung erkannt';
+
+  let html = '<div class="preview-section">';
+  html += `<div class="pv-dashboard" style="--pv-bg:${colors.bg}; --pv-accent:${colors.accent}; --pv-card:${colors.card}; --pv-text:${colors.text}; --pv-text-dim:${colors.textDim};">`;
 
   // Header
   html += `
@@ -1083,370 +1214,635 @@ function renderDashboardPreview() {
       <div class="pv-dash-header-left">
         <span class="pv-dash-header-hex">&#x2B21;</span>
         <input class="pv-dash-title-input" type="text" value="${escHtml(state.title)}"
-          oninput="updateTitle(this.value); document.querySelectorAll('.pv-dash-title-input').forEach(i=>{ if(i!==this) i.value=this.value })"
-          placeholder="Mein nano-zyrkel">
+          placeholder="Mein Agent" id="preview-title-input">
       </div>
       ${schedLabel ? `<div class="pv-dash-schedule">&#9200; ${escHtml(schedLabel)}</div>` : '<div class="pv-dash-schedule" style="opacity:0.4;">Kein Zeitplan</div>'}
     </div>
   `;
 
-  html += `<div class="pv-dash-body">`;
+  html += '<div class="pv-dash-body">';
 
-  // Row 1: Source(s) and Compute/Charts
-  html += `<div class="pv-slot-grid">`;
-  html += renderSourceSlot(sources);
-  html += renderChartsSlot(computes);
-  html += `</div>`;
-
-  // Row 2: Condition and Action
-  if (conditions.length > 0 || actions.length > 0) {
-    html += `<div class="pv-slot-grid">`;
-    html += renderConditionSlot(conditions);
-    html += renderActionSlot(actions);
-    html += `</div>`;
-  } else {
-    html += `<div class="pv-slot-grid">`;
-    html += renderConditionSlot([]);
-    html += renderActionSlot([]);
-    html += `</div>`;
+  // Build flow steps based on answered questions
+  if (state.intent && state.intent !== 'blank') {
+    html += buildPreviewSteps(srcUrl, condText);
   }
 
-  // Notifications
-  html += renderNotifySection(notifies, sources, conditions, schedules);
-
-  html += `</div></div>`; // close body, dashboard
-
-  $canvas.innerHTML = html;
-
-  // Wire up field inputs
-  $canvas.querySelectorAll('.pv-field-input').forEach(inp => {
-    inp.addEventListener('input', (e) => {
-      updateFieldValue(e.target.dataset.blockId, e.target.dataset.field, e.target.value);
-    });
-  });
-}
-
-function renderSlotEmpty(label, hint) {
-  return `
-    <div class="pv-slot">
-      <span class="pv-slot-label">${label}</span>
-      <div class="pv-slot-hint">${hint}</div>
-    </div>
-  `;
-}
-
-function renderFilledHeader(typeLabel, blockId, blockName) {
-  return `
-    <div class="pv-filled-header">
-      <div>
-        <span class="pv-filled-type">${typeLabel}</span>
-        <span class="pv-filled-name">${escHtml(blockName)}</span>
-      </div>
-      <button class="pv-filled-remove" onclick="removeBlock('${blockId}')" title="Entfernen">&times;</button>
-    </div>
-  `;
-}
-
-function renderFields(blockId, block) {
-  if (!block.fields || block.fields.length === 0) return '';
-  const config = state.blockConfig[blockId] || {};
-  return `<div class="pv-fields">
-    ${block.fields.map(f => {
-      const val = config[f.name] || '';
-      if (f.type === 'select') {
-        return `<label class="pv-field">
-          <span class="pv-field-label">${f.label}</span>
-          <select class="pv-field-input" data-block-id="${blockId}" data-field="${f.name}">
-            ${(f.options || []).map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
-          </select>
-        </label>`;
-      }
-      if (f.type === 'textarea') {
-        return `<label class="pv-field">
-          <span class="pv-field-label">${f.label}</span>
-          <textarea class="pv-field-input" data-block-id="${blockId}" data-field="${f.name}" placeholder="${escHtml(f.placeholder || '')}">${escHtml(val)}</textarea>
-        </label>`;
-      }
-      return `<label class="pv-field">
-        <span class="pv-field-label">${f.label}</span>
-        <input class="pv-field-input" type="${f.type || 'text'}" data-block-id="${blockId}" data-field="${f.name}" value="${escHtml(val)}" placeholder="${escHtml(f.placeholder || '')}">
-      </label>`;
-    }).join('')}
-  </div>`;
-}
-
-function renderSourceSlot(sourceIds) {
-  if (sourceIds.length === 0) {
-    return renderSlotEmpty('Datenquelle', 'Waehle &#128225; <b>Quellen</b> im Dropdown');
+  // Notifications preview
+  const notifyAnswers = state.answers.notify;
+  if (notifyAnswers && Array.isArray(notifyAnswers) && notifyAnswers.length > 0) {
+    html += renderNotifyPreviewSection(notifyAnswers, srcUrl, condText);
   }
-  return sourceIds.map(id => {
-    const block = BLOCK_MAP[id];
-    const visualHtml = block.visual ? block.visual() : '';
-    return `
-      <div class="pv-slot filled">
-        ${renderFilledHeader('Datenquelle', id, block.name)}
-        <div class="pv-filled-body">
-          <div class="pv-filled-visual">${visualHtml}</div>
-          ${renderFields(id, block)}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
 
-function renderConditionSlot(condIds) {
-  if (condIds.length === 0) {
-    return renderSlotEmpty('Wenn (Bedingung)', 'Waehle &#128269; <b>Wenn</b> im Dropdown');
+  // Extra blocks preview
+  if (state.extraBlocks.length > 0) {
+    html += renderExtraBlocksPreview();
   }
-  return condIds.map(id => {
-    const block = BLOCK_MAP[id];
-    const visualHtml = block.visual ? block.visual() : '';
-    return `
-      <div class="pv-slot filled">
-        ${renderFilledHeader('Bedingung', id, block.name)}
-        <div class="pv-filled-body">
-          <div class="pv-filled-visual">${visualHtml}</div>
-          ${renderFields(id, block)}
-        </div>
-      </div>
-    `;
-  }).join('');
+
+  html += '</div></div></div>'; // body, dashboard, preview-section
+
+  return html;
 }
 
-function renderActionSlot(actionIds) {
-  if (actionIds.length === 0) {
-    return renderSlotEmpty('Dann (Aktion)', 'Waehle &#9889; <b>Dann</b> im Dropdown (optional)');
-  }
-  return actionIds.map(id => {
-    const block = BLOCK_MAP[id];
-    const visualHtml = block.visual ? block.visual() : '';
-    return `
-      <div class="pv-slot filled">
-        ${renderFilledHeader('Aktion', id, block.name)}
-        <div class="pv-filled-body">
-          <div class="pv-filled-visual">${visualHtml}</div>
-          ${renderFields(id, block)}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
+function buildPreviewSteps(srcUrl, condText) {
+  let html = '';
+  const intent = state.intent;
 
-function renderChartsSlot(computeIds) {
-  if (computeIds.length === 0) {
-    return renderSlotEmpty('Visualisierung / Berechnung', 'Waehle &#9881;&#65039; <b>Berechnung</b> im Dropdown');
-  }
-  return computeIds.map(id => {
-    const block = BLOCK_MAP[id];
-    const visualHtml = block.visual ? block.visual() : '';
-    return `
-      <div class="pv-slot filled">
-        ${renderFilledHeader('Berechnung', id, block.name)}
-        <div class="pv-filled-body">
-          <div class="pv-chart-large">${visualHtml}</div>
+  // Source step
+  const whatAnswer = state.answers.what;
+  if (whatAnswer) {
+    const whatLabels = {
+      website: '\uD83C\uDF10 Webseite', api: '\uD83D\uDD0C API', feed: '\uD83D\uDCF0 Feed', inbox: '\uD83D\uDCE7 Postfach',
+      cloud: '\u2601\uFE0F Cloud', database: '\uD83D\uDDC4 Datenbank',
+      rss: '\uD83D\uDCF0 RSS/Atom', email: '\uD83D\uDCE7 Emails', urls: '\uD83D\uDD17 URLs',
+      dashboard: '\uD83D\uDCCA Dashboard', portal: '\uD83C\uDFA8 Portal', learning: '\uD83D\uDCDA Lernumgebung'
+    };
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDCE1</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Quelle</div>
+          <div class="value">${whatLabels[whatAnswer] || whatAnswer}</div>
         </div>
       </div>
-    `;
-  }).join('');
-}
-
-function renderNotifySection(notifyIds, sources, conditions, schedules) {
-  if (notifyIds.length === 0) {
-    return `
-      <div class="pv-notify-section">
-        <div class="pv-notify-title">&#128276; Benachrichtigungen</div>
-        <div class="pv-slot">
-          <span class="pv-slot-label">Benachrichtigungen</span>
-          <div class="pv-slot-hint">Waehle &#128276; <b>Melden</b> im Dropdown</div>
-        </div>
-      </div>
+      <div class="pv-flow-connector"></div>
     `;
   }
 
-  const srcUrl = getFirstSourceUrl();
-  const condText = getFirstConditionText();
-  const schedLabel = schedules.length > 0 ? BLOCK_MAP[schedules[0]].name : 'stuendlich';
-
-  return `
-    <div class="pv-notify-section">
-      <div class="pv-notify-title">&#128276; Benachrichtigungen</div>
-      <div class="pv-notify-grid">
-        ${notifyIds.map(id => renderNotifyCard(id, srcUrl, condText, schedLabel)).join('')}
+  // URL field if present
+  if (state.fieldValues.url || state.fieldValues.valuePath || state.fieldValues.reminderUrl) {
+    const url = state.fieldValues.url || state.fieldValues.valuePath || state.fieldValues.reminderUrl;
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDD17</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Adresse</div>
+          <div class="value">${escHtml(url)}</div>
+        </div>
       </div>
-    </div>
-  `;
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Condition step (observe)
+  const changeAnswer = state.answers.change;
+  if (changeAnswer) {
+    const changeLabels = {
+      contains: `\uD83D\uDD0D Wenn: "${escHtml(state.fieldValues.searchText || '...')}" erscheint`,
+      changed: '\uD83D\uDD04 Wenn: Irgendwas aendert sich',
+      threshold: `\uD83D\uDCCA Wenn: Wert ${state.fieldValues.thresholdOp || '>'} ${state.fieldValues.thresholdVal || '...'}`,
+      llm: `\uD83E\uDD16 Wenn: "${escHtml(state.fieldValues.question || '...')}"`,
+      css: `\uD83C\uDFF7 Wenn: "${escHtml(state.fieldValues.selector || '...')}" erscheint`
+    };
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDD0D</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Bedingung</div>
+          <div class="value">${changeLabels[changeAnswer] || changeAnswer}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Trigger step (react)
+  const triggerAnswer = state.answers.trigger;
+  if (triggerAnswer) {
+    const triggerLabels = {
+      email: '\uD83D\uDCE7 Eingehende Email',
+      webhook: '\uD83D\uDD17 Webhook empfangen',
+      feed: '\uD83D\uDCF0 Neuer Feed-Eintrag',
+      change: '\uD83D\uDD04 Aenderung erkannt'
+    };
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDD14</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Trigger</div>
+          <div class="value">${triggerLabels[triggerAnswer] || triggerAnswer}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Action step (react)
+  const actionAnswer = state.answers.action;
+  if (actionAnswer) {
+    const actionLabels = {
+      reply_email: '\uD83D\uDCE7 Email antworten',
+      webhook_out: '\uD83D\uDD17 Webhook aufrufen',
+      github_issue: '\uD83D\uDCDD GitHub Issue erstellen',
+      shell: '\u26A1 Shell-Befehl ausfuehren',
+      trigger_agent: '\uD83D\uDD04 Anderen Agent triggern'
+    };
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\u26A1</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Aktion</div>
+          <div class="value">${actionLabels[actionAnswer] || actionAnswer}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Approval step (react)
+  const approvalAnswer = state.answers.approval;
+  if (approvalAnswer) {
+    const approvalLabels = {
+      auto: '\u2705 Automatisch ausfuehren',
+      ask: '\uD83D\uDCAC Erst per Telegram fragen',
+      log: '\uD83D\uDCCB Nur loggen'
+    };
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDD12</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Genehmigung</div>
+          <div class="value">${approvalLabels[approvalAnswer] || approvalAnswer}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Collect format
+  const formatAnswer = state.answers.format;
+  if (formatAnswer) {
+    const formatLabels = {
+      list: '\uD83D\uDCCB Als Liste',
+      email_digest: '\uD83D\uDCE7 Als Email-Digest',
+      webpage: '\uD83C\uDF10 Als Webseite',
+      github_issue: '\uD83D\uDCDD Als GitHub Issue'
+    };
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDCE4</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Ausgabe</div>
+          <div class="value">${formatLabels[formatAnswer] || formatAnswer}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Visualization (measure)
+  const vizAnswer = state.answers.viz;
+  if (vizAnswer) {
+    const vizLabels = {
+      line: '\uD83D\uDCC8 Line Chart',
+      bar: '\uD83D\uDCCA Bar Chart',
+      donut: '\uD83C\uDF69 Donut',
+      heatmap: '\uD83D\uDDFA Heatmap'
+    };
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDCCA</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Visualisierung</div>
+          <div class="value">${vizLabels[vizAnswer] || vizAnswer}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Alert (measure)
+  const alertAnswer = state.answers.alert;
+  if (alertAnswer === 'yes') {
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDEA8</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Alert</div>
+          <div class="value">Wenn Wert ${state.fieldValues.thresholdOp || '>'} ${state.fieldValues.thresholdVal || '...'}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Reminder specific
+  if (state.fieldValues.reminderText) {
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\u23F0</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Erinnerung</div>
+          <div class="value">${escHtml(state.fieldValues.reminderText)}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  const whenAnswer = state.answers.when;
+  if (whenAnswer === 'fixed' && state.fieldValues.reminderDate) {
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDCC5</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Datum</div>
+          <div class="value">${escHtml(state.fieldValues.reminderDate)}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Reminder escalation chips
+  const activeChips = Object.keys(state.reminderChips).filter(k => state.reminderChips[k]);
+  if (activeChips.length > 0) {
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83D\uDCE2</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Erinnerungsstaffel</div>
+          <div class="value">${activeChips.map(c => c + ' Tage vorher').join(', ')}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Present components
+  const compAnswers = state.answers.components;
+  if (compAnswers && Array.isArray(compAnswers) && compAnswers.length > 0) {
+    const compLabels = {
+      charts: '\uD83D\uDCC8 Charts', tables: '\uD83D\uDCCA Tabellen', maps: '\uD83D\uDDFA Karten',
+      genome: '\uD83E\uDDEC Genom-Tracks', network: '\uD83D\uDD78 Netzwerk-Graphen'
+    };
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\uD83E\uDDE9</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Komponenten</div>
+          <div class="value">${compAnswers.map(c => compLabels[c] || c).join(', ')}</div>
+        </div>
+      </div>
+      <div class="pv-flow-connector"></div>
+    `;
+  }
+
+  // Schedule step
+  const schedLabel = getScheduleLabel();
+  if (schedLabel) {
+    html += `
+      <div class="pv-flow-step">
+        <div class="pv-flow-step-icon">\u23F0</div>
+        <div class="pv-flow-step-content">
+          <div class="label">Zeitplan</div>
+          <div class="value">${escHtml(schedLabel)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  return html;
 }
 
-function renderNotifyCard(notifyId, srcUrl, condText, schedLabel) {
-  const block = BLOCK_MAP[notifyId];
+function renderNotifyPreviewSection(channels, srcUrl, condText) {
   const now = new Date();
   const timeStr = now.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 
+  let html = `
+    <div class="pv-notify-section">
+      <div class="pv-notify-title">&#128276; Benachrichtigungen</div>
+      <div class="pv-notify-grid">
+  `;
+
+  channels.forEach(ch => {
+    html += renderNotifyPreview(ch, srcUrl, condText, timeStr);
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderNotifyPreview(channel, srcUrl, condText, timeStr) {
   let inner = '';
-  if (notifyId === 'notify-telegram') {
-    inner = `
-      <div class="pv-ntf-tg-bubble">
-        &#128276; <b>Aenderung erkannt!</b><br>
-        Die Seite ${escHtml(srcUrl || 'https://...')} enthaelt jetzt "${escHtml(condText)}".
-        <div class="pv-ntf-tg-time">${timeStr}</div>
-      </div>
-    `;
-  } else if (notifyId === 'notify-discord') {
-    inner = `
-      <div class="pv-ntf-discord-header">
-        <div class="pv-ntf-discord-avatar"></div>
-        <div class="pv-ntf-discord-name">nano-zyrkel BOT</div>
-      </div>
-      <div class="pv-ntf-discord-embed">
-        <b>Aenderung erkannt!</b><br>
-        Seite: ${escHtml(srcUrl || '...')}<br>
-        Bedingung: "${escHtml(condText)}"<br>
-        <span style="color:#72767d; font-size:11px;">${timeStr}</span>
-      </div>
-    `;
-  } else if (notifyId === 'notify-slack') {
-    inner = `
-      <div class="pv-ntf-slack-avatar"></div>
-      <div class="pv-ntf-slack-body">
-        <div class="pv-ntf-slack-name">nano-zyrkel</div>
-        &#128276; *Aenderung erkannt!*<br>
-        &gt; ${escHtml(srcUrl || '...')}<br>
-        &gt; "${escHtml(condText)}"
-      </div>
-    `;
-  } else if (notifyId === 'notify-email') {
-    inner = `
-      <div class="pv-ntf-email-subject">Aenderung erkannt auf ${escHtml(srcUrl || '...')}</div>
-      <div class="pv-ntf-email-body">Hallo,
+  let cls = '';
 
-dein Tracker hat eine Aenderung erkannt:
+  if (channel === 'telegram') {
+    cls = 'pv-notify-telegram';
+    inner = `<div class="pv-ntf-tg-bubble">
+      &#128276; <b>Aenderung erkannt!</b><br>
+      Die Seite ${escHtml(srcUrl)} enthaelt jetzt "${escHtml(condText)}".
+      <div class="pv-ntf-tg-time">${timeStr}</div>
+    </div>`;
+  } else if (channel === 'email') {
+    cls = 'pv-notify-email';
+    inner = `<div class="pv-ntf-email-subject">Aenderung erkannt auf ${escHtml(srcUrl)}</div>
+    <div class="pv-ntf-email-body">Hallo,
 
-  Seite: ${escHtml(srcUrl || '...')}
+dein Agent hat eine Aenderung erkannt:
+
+  Seite: ${escHtml(srcUrl)}
   Bedingung: "${escHtml(condText)}"
   Zeit: ${timeStr}
 
 Viele Gruesse,
-dein nano-zyrkel</div>
-    `;
-  } else if (notifyId === 'notify-webhook') {
-    inner = `POST ${escHtml((state.blockConfig[notifyId] || {}).url || 'https://...')}
-{
-  "event": "change_detected",
-  "source": "${escHtml(srcUrl || '...')}",
-  "condition": "${escHtml(condText)}",
-  "time": "${timeStr}"
-}`;
-  } else if (notifyId === 'notify-matrix') {
-    inner = `
-      <b>#${escHtml((state.blockConfig[notifyId] || {}).room || 'alerts:matrix.org')}</b><br>
-      &#128276; Aenderung erkannt auf ${escHtml(srcUrl || '...')}<br>
-      Bedingung: ${escHtml(condText)}
-    `;
-  } else if (notifyId === 'notify-silence') {
-    inner = `
-      <div style="font-size:22px; margin-bottom:6px;">&#9989;</div>
-      <div style="font-weight:600; margin-bottom:4px;">Alles ruhig</div>
-      <div style="font-size:12px; color:var(--text-muted);">
-        Letzte Pruefung: ${timeStr}<br>
-        Dein Tracker laeuft.
-      </div>
-    `;
-  }
-
-  const clsMap = {
-    'notify-telegram': 'pv-notify-telegram',
-    'notify-discord': 'pv-notify-discord',
-    'notify-slack': 'pv-notify-slack',
-    'notify-email': 'pv-notify-email',
-    'notify-webhook': 'pv-notify-webhook',
-    'notify-matrix': 'pv-notify-matrix',
-    'notify-silence': 'pv-notify-silence',
-  };
-
-  return `
-    <div class="pv-notify-card ${clsMap[notifyId] || ''}">
-      <button class="pv-filled-remove" onclick="removeBlock('${notifyId}')">&times;</button>
-      <div class="pv-ntf-inner">${inner}</div>
+dein nano-zyrkel</div>`;
+  } else if (channel === 'slack') {
+    cls = 'pv-notify-slack';
+    inner = `<div class="pv-ntf-slack-avatar"></div>
+    <div class="pv-ntf-slack-body">
+      <div class="pv-ntf-slack-name">nano-zyrkel</div>
+      &#128276; *Aenderung erkannt!*<br>
+      &gt; ${escHtml(srcUrl)}<br>
+      &gt; "${escHtml(condText)}"
+    </div>`;
+  } else if (channel === 'discord') {
+    cls = 'pv-notify-discord';
+    inner = `<div class="pv-ntf-discord-header">
+      <div class="pv-ntf-discord-avatar"></div>
+      <div class="pv-ntf-discord-name">nano-zyrkel BOT</div>
     </div>
-  `;
-}
-
-function getFirstSourceUrl() {
-  for (const id of state.blocks) {
-    if (id.startsWith('src-')) {
-      const cfg = state.blockConfig[id] || {};
-      return cfg.url || cfg.query || cfg.gene || cfg.repo || cfg.metric || cfg.bucket || cfg.host || 'https://example.com';
-    }
+    <div class="pv-ntf-discord-embed">
+      <b>Aenderung erkannt!</b><br>
+      Seite: ${escHtml(srcUrl)}<br>
+      Bedingung: "${escHtml(condText)}"<br>
+      <span style="color:#72767d; font-size:11px;">${timeStr}</span>
+    </div>`;
+  } else if (channel === 'silence') {
+    cls = 'pv-notify-silence';
+    inner = `<div style="font-size:22px; margin-bottom:6px;">&#9989;</div>
+    <div style="font-weight:600; margin-bottom:4px;">Alles ruhig</div>
+    <div style="font-size:12px; color:var(--text-muted);">
+      Letzte Pruefung: ${timeStr}<br>
+      Dein Agent laeuft.
+    </div>`;
   }
-  return 'https://example.com';
+
+  return `<div class="pv-notify-card ${cls}"><div class="pv-ntf-inner">${inner}</div></div>`;
 }
 
-function getFirstConditionText() {
-  for (const id of state.blocks) {
-    if (id.startsWith('cond-')) {
-      const cfg = state.blockConfig[id] || {};
-      if (id === 'cond-contains') return cfg.value || 'freie Plaetze';
-      if (id === 'cond-llm') return cfg.question || 'KI-Bedingung erfuellt';
-      if (id === 'cond-css') return cfg.selector || '.selector';
-      if (id === 'cond-json') return (cfg.path || '$.status') + ' == ' + (cfg.value || 'open');
-      if (id === 'cond-regex') return cfg.regex || 'Preis: \\d+';
-      if (id === 'cond-threshold') return (cfg.path || 'Wert') + ' ' + (cfg.operator || '>') + ' ' + (cfg.value || '0');
-      const block = BLOCK_MAP[id];
-      return block ? block.name : 'Bedingung erfuellt';
+function renderExtraBlocksPreview() {
+  if (state.extraBlocks.length === 0) return '';
+  let html = '<div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:16px;">';
+  html += '<div class="pv-notify-title">&#9881;&#65039; Erweiterte Bausteine</div>';
+
+  state.extraBlocks.forEach(blockId => {
+    let block = null;
+    for (const cat of EXTRA_BLOCK_CATEGORIES) {
+      block = cat.blocks.find(b => b.id === blockId);
+      if (block) break;
     }
-  }
-  return 'Aenderung erkannt';
+    if (!block) return;
+
+    html += `<div class="pv-flow-step" style="margin-bottom:8px;">
+      <div class="pv-flow-step-icon" style="font-size:14px;">\u2699\uFE0F</div>
+      <div class="pv-flow-step-content">
+        <div class="label">${escHtml(block.name)}</div>
+        <div class="value" style="font-size:12px; color:var(--pv-text-dim);">${escHtml(block.desc)}</div>
+      </div>
+    </div>`;
+  });
+
+  html += '</div>';
+  return html;
 }
 
-// ─── CRON / SCHEDULE ─────────────────────────────────────────
+// ─── RENDER: EXPANDED OPTIONS ───────────────────────────────
 
-function getActiveCron() {
-  for (const id of state.blocks) {
-    if (id.startsWith('sched-')) {
-      return BLOCK_MAP[id].cron;
-    }
-  }
-  return '0 * * * *';
+function renderExpandedOptions() {
+  let html = `<div class="expanded-options${state.expandedOptions ? ' open' : ''}" id="expanded-options">`;
+  html += `<button class="expanded-options-toggle" id="expanded-options-toggle">
+    <span class="expanded-options-arrow">&#9662;</span>
+    Erweiterte Optionen
+  </button>`;
+  html += '<div class="expanded-options-body">';
+
+  EXTRA_BLOCK_CATEGORIES.forEach(cat => {
+    html += `<div class="block-catalog-section">
+      <div class="block-catalog-title">${cat.icon} ${cat.name}</div>
+      <div class="block-catalog-grid">`;
+
+    cat.blocks.forEach(block => {
+      const inUse = state.extraBlocks.includes(block.id);
+      const visualHtml = block.visual ? (typeof block.visual === 'function' ? block.visual() : block.visual) : '';
+      html += `<div class="block-catalog-card${inUse ? ' in-use' : ''}" data-extra-block="${block.id}">
+        <div class="block-catalog-visual">${visualHtml}</div>
+        <div class="block-catalog-label">
+          <div class="block-catalog-name">${block.name}</div>
+          <div class="block-catalog-desc">${block.desc}</div>
+        </div>
+      </div>`;
+    });
+
+    html += '</div></div>';
+  });
+
+  html += '</div></div>';
+  return html;
 }
 
-// ─── CODE GENERATION ─────────────────────────────────────────
+// ─── WIRE UP EVENT LISTENERS ────────────────────────────────
+
+function wireUpBuildPanel() {
+  // Answer cards
+  $buildPanel.querySelectorAll('.answer-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const qId = card.dataset.question;
+      const aId = card.dataset.answer;
+      const isMulti = card.dataset.multi === 'true';
+      selectAnswer(qId, aId, isMulti);
+    });
+  });
+
+  // Theme cards
+  $buildPanel.querySelectorAll('.theme-card').forEach(card => {
+    card.addEventListener('click', () => {
+      state.design = card.dataset.themeId;
+      renderBuildPanel();
+      if (state.codeVisible) renderCodeDrawer();
+    });
+  });
+
+  // Toggle chips
+  $buildPanel.querySelectorAll('.toggle-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const chipId = chip.dataset.chipId;
+      state.reminderChips[chipId] = !state.reminderChips[chipId];
+      renderBuildPanel();
+      if (state.codeVisible) renderCodeDrawer();
+    });
+  });
+
+  // Inline field inputs
+  $buildPanel.querySelectorAll('.inline-field-input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      state.fieldValues[e.target.dataset.fieldName] = e.target.value;
+      // Debounced preview re-render
+      clearTimeout(state._fieldTimer);
+      state._fieldTimer = setTimeout(() => {
+        renderBuildPanel();
+        if (state.codeVisible) renderCodeDrawer();
+      }, 400);
+    });
+    // Prevent card click when interacting with fields
+    inp.addEventListener('click', (e) => e.stopPropagation());
+  });
+
+  // Title input
+  const titleInput = document.getElementById('preview-title-input');
+  if (titleInput) {
+    titleInput.addEventListener('input', (e) => {
+      state.title = e.target.value || 'Mein Agent';
+      if (state.codeVisible) renderCodeDrawer();
+    });
+  }
+
+  // Expanded options toggle
+  const expToggle = document.getElementById('expanded-options-toggle');
+  if (expToggle) {
+    expToggle.addEventListener('click', () => {
+      state.expandedOptions = !state.expandedOptions;
+      const expOpt = document.getElementById('expanded-options');
+      if (expOpt) expOpt.classList.toggle('open', state.expandedOptions);
+    });
+  }
+
+  // Extra block catalog cards
+  $buildPanel.querySelectorAll('.block-catalog-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const blockId = card.dataset.extraBlock;
+      if (state.extraBlocks.includes(blockId)) return;
+      state.extraBlocks.push(blockId);
+      renderBuildPanel();
+      if (state.codeVisible) renderCodeDrawer();
+    });
+  });
+}
+
+// ─── SELECT ANSWER ──────────────────────────────────────────
+
+function selectAnswer(questionId, answerId, isMulti) {
+  if (isMulti) {
+    let arr = state.answers[questionId];
+    if (!Array.isArray(arr)) arr = [];
+    const idx = arr.indexOf(answerId);
+    if (idx >= 0) arr.splice(idx, 1);
+    else arr.push(answerId);
+    state.answers[questionId] = arr;
+  } else {
+    state.answers[questionId] = answerId;
+  }
+
+  renderBuildPanel();
+  if (state.codeVisible) renderCodeDrawer();
+}
+
+// ─── CONFIG GENERATION ──────────────────────────────────────
 
 function generateConfig() {
   const config = {
-    name: state.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mein-nano-zyrkel',
+    name: state.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mein-agent',
     description: state.title,
     version: '1.0.0',
     hats: {}
   };
-  const sources = [];
-  const conditions = [];
-  const notifications = [];
-  const actions = [];
-  const wasmFeatures = [];
 
-  state.blocks.forEach(id => {
-    const block = BLOCK_MAP[id];
-    const cfg = state.blockConfig[id] || {};
-    if (!block) return;
+  if (!state.intent) return JSON.stringify(config, null, 2);
 
-    if (id.startsWith('src-')) sources.push({ type: id.replace('src-', ''), ...cfg });
-    else if (id.startsWith('cond-')) conditions.push({ type: id.replace('cond-', ''), ...cfg });
-    else if (id.startsWith('notify-')) notifications.push({ type: id.replace('notify-', ''), ...cfg });
-    else if (id.startsWith('act-')) actions.push({ type: id.replace('act-', ''), ...cfg });
-    else if (id.startsWith('feat-') && block.wasmFeature) wasmFeatures.push(block.wasmFeature);
-  });
+  const intent = state.intent;
+  const answers = state.answers;
+  const fv = state.fieldValues;
 
-  const cron = getActiveCron();
-  if (sources.length) config.hats.sources = sources;
-  if (conditions.length) config.hats.conditions = conditions;
-  if (cron) config.hats.schedule = { cron };
-  if (notifications.length) config.hats.notifications = notifications;
-  if (actions.length) config.hats.actions = actions;
-  if (state.design) {
-    const theme = BLOCK_MAP[state.design];
-    if (theme) config.hats.theme = { id: state.design.replace('theme-', ''), colors: theme.colors };
+  // Translate intent + answers into technical config
+  if (intent === 'observe') {
+    config.hats.type = 'watcher';
+
+    // Source
+    const whatMap = { website: 'url', api: 'api', feed: 'rss', inbox: 'imap' };
+    config.hats.sources = [{ type: whatMap[answers.what] || 'url', url: fv.url || '' }];
+
+    // Condition
+    if (answers.change === 'contains') {
+      config.hats.conditions = [{ type: 'contains', value: fv.searchText || '' }];
+    } else if (answers.change === 'changed') {
+      config.hats.conditions = [{ type: 'changed' }];
+    } else if (answers.change === 'threshold') {
+      config.hats.conditions = [{ type: 'threshold', operator: fv.thresholdOp || '>', value: Number(fv.thresholdVal) || 0 }];
+    } else if (answers.change === 'llm') {
+      config.hats.conditions = [{ type: 'llm', question: fv.question || '' }];
+    } else if (answers.change === 'css') {
+      config.hats.conditions = [{ type: 'css', selector: fv.selector || '' }];
+    }
+  } else if (intent === 'measure') {
+    config.hats.type = 'tracker';
+    const whatMap = { api: 'api', website: 'url', cloud: 'aws', database: 'db' };
+    config.hats.sources = [{ type: whatMap[answers.what] || 'api', url: fv.valuePath || '' }];
+    if (answers.alert === 'yes') {
+      config.hats.conditions = [{ type: 'threshold', operator: fv.thresholdOp || '>', value: Number(fv.thresholdVal) || 0 }];
+    }
+    const vizMap = { line: 'viz-basic', bar: 'viz-basic', donut: 'viz-basic', heatmap: 'viz-advanced' };
+    if (answers.viz) {
+      config.hats.wasm_features = [vizMap[answers.viz] || 'viz-basic'];
+      config.hats.visualization = { type: answers.viz };
+    }
+  } else if (intent === 'collect') {
+    config.hats.type = 'collector';
+    const whatMap = { rss: 'rss', email: 'imap', api: 'api', urls: 'url' };
+    config.hats.sources = [{ type: whatMap[answers.what] || 'rss' }];
+    if (answers.format) config.hats.output = { format: answers.format };
+  } else if (intent === 'react') {
+    config.hats.type = 'reactor';
+    const triggerMap = { email: 'imap', webhook: 'webhook-in', feed: 'rss', change: 'watcher' };
+    config.hats.trigger = { type: triggerMap[answers.trigger] || 'webhook-in' };
+    const actionMap = { reply_email: 'email-reply', webhook_out: 'webhook', github_issue: 'github-issue', shell: 'shell', trigger_agent: 'chain-trigger' };
+    config.hats.actions = [{ type: actionMap[answers.action] || 'webhook' }];
+    if (answers.approval) config.hats.approval = { mode: answers.approval };
+  } else if (intent === 'present') {
+    config.hats.type = 'presenter';
+    if (state.design) {
+      const q = (QUESTIONS.present || []).find(q => q.type === 'themes');
+      const t = q ? q.options.find(o => o.id === state.design) : null;
+      if (t) config.hats.theme = { id: state.design.replace('theme-', ''), colors: t.colors };
+    }
+    if (answers.components && Array.isArray(answers.components)) {
+      const wasmMap = { charts: 'viz-basic', tables: 'data', maps: 'viz-spatial', genome: 'viz-spatial', network: 'viz-spatial' };
+      config.hats.wasm_features = [...new Set(answers.components.map(c => wasmMap[c] || 'data'))];
+      config.hats.components = answers.components;
+    }
+  } else if (intent === 'remind') {
+    config.hats.type = 'reminder';
+    config.hats.reminder = {
+      text: fv.reminderText || '',
+      mode: answers.when || 'fixed'
+    };
+    if (answers.when === 'fixed' && fv.reminderDate) config.hats.reminder.date = fv.reminderDate;
+    if (answers.when === 'dynamic' && fv.reminderUrl) config.hats.reminder.url = fv.reminderUrl;
+    const activeChips = Object.keys(state.reminderChips).filter(k => state.reminderChips[k]);
+    if (activeChips.length > 0) config.hats.reminder.remind_days = activeChips.map(Number).sort((a, b) => b - a);
   }
-  if (wasmFeatures.length) config.hats.wasm_features = [...new Set(wasmFeatures)];
+
+  // Schedule
+  config.hats.schedule = { cron: getActiveCron() };
+
+  // Notifications
+  const notifyAnswers = answers.notify;
+  if (notifyAnswers && Array.isArray(notifyAnswers) && notifyAnswers.length > 0) {
+    config.hats.notifications = notifyAnswers.map(ch => ({ type: ch }));
+  }
+
+  // Extra blocks
+  if (state.extraBlocks.length > 0) {
+    const extras = {};
+    state.extraBlocks.forEach(id => {
+      const prefix = id.split('-')[0];
+      const type = id.replace(/^[^-]+-/, '');
+      if (!extras[prefix]) extras[prefix] = [];
+      extras[prefix].push({ type });
+    });
+    if (extras.src) config.hats.extra_sources = extras.src;
+    if (extras.cond) config.hats.extra_conditions = extras.cond;
+    if (extras.act) config.hats.extra_actions = extras.act;
+    if (extras.feat) config.hats.extra_features = extras.feat;
+  }
 
   return JSON.stringify(config, null, 2);
 }
@@ -1490,13 +1886,14 @@ jobs:
 }
 
 function generateReadme() {
+  const def = getIntentDef(state.intent);
+  const intentName = def ? def.question : 'Autonomer Agent';
   return `# ${state.title}
 
 Ein autonomer nano-zyrkel Agent, erstellt mit dem nano-zyrkel Project Studio.
 
-## Was er tut
-
-${getReadmeDescription()}
+## Typ
+${intentName}
 
 ## Deploy
 
@@ -1507,17 +1904,7 @@ ${getReadmeDescription()}
 `;
 }
 
-function getReadmeDescription() {
-  const parts = [];
-  blocksOfType('src-').forEach(id => parts.push('- Quelle: ' + BLOCK_MAP[id].name));
-  blocksOfType('cond-').forEach(id => parts.push('- Bedingung: ' + BLOCK_MAP[id].name));
-  blocksOfType('sched-').forEach(id => parts.push('- Zeitplan: ' + BLOCK_MAP[id].name));
-  blocksOfType('notify-').forEach(id => parts.push('- Benachrichtigung: ' + BLOCK_MAP[id].name));
-  blocksOfType('act-').forEach(id => parts.push('- Aktion: ' + BLOCK_MAP[id].name));
-  return parts.join('\n') || 'Keine Konfiguration';
-}
-
-// ─── CODE DRAWER ─────────────────────────────────────────────
+// ─── CODE DRAWER ────────────────────────────────────────────
 
 function renderCodeDrawer() {
   let content = '';
@@ -1565,7 +1952,7 @@ $btnCopy.addEventListener('click', async () => {
   }
 });
 
-// ─── ZYRKEL DETECTION ────────────────────────────────────────
+// ─── ZYRKEL DETECTION ───────────────────────────────────────
 
 async function detectZyrkel() {
   const ports = [37848, 37849, 37850, 37851, 37852, 37853];
@@ -1608,13 +1995,13 @@ $btnDeploy.addEventListener('click', async () => {
   setTimeout(() => { $btnDeploy.textContent = 'Jetzt deployen'; }, 2500);
 });
 
-// ─── LLM CHAT ────────────────────────────────────────────────
+// ─── LLM CHAT ───────────────────────────────────────────────
 
 $chatFab.addEventListener('click', () => {
   state.chatOpen = !state.chatOpen;
   $chatOverlay.classList.toggle('hidden', !state.chatOpen);
   if (state.chatOpen && $chatMessages.children.length === 0) {
-    appendChatMsg('assistant', 'Hi! Beschreibe was du bauen willst — z.B. "Ueberwache den Schwimmkurs" oder "Tracke ClinVar-Varianten". Ich fuege die passenden Bausteine hinzu.');
+    appendChatMsg('assistant', 'Hi! Beschreibe was du bauen willst — z.B. "Ueberwache den Schwimmkurs" oder "Tracke ClinVar-Varianten". Ich helfe dir die richtigen Einstellungen zu waehlen.');
   }
 });
 
@@ -1644,69 +2031,58 @@ async function sendChatMessage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: msg,
-          system: 'Du bist der nano-zyrkel Builder-Assistent. Wenn du ein Konfigurationsfeld bestimmst, bette es so ein: <!-- ADD:blockId --> fuer jeden Baustein. Verfuegbare Blocks: ' + Object.keys(BLOCK_MAP).join(', ')
+          system: 'Du bist der nano-zyrkel Builder-Assistent. Hilf dem Benutzer den richtigen Intent und die richtigen Antworten zu waehlen. Verfuegbare Intents: ' + INTENTS.map(i => i.id).join(', ')
         })
       });
       const data = await res.json();
       const response = data.response || data.message || '';
-      parseAndApplyFields(response);
-      appendChatMsg('assistant', response.replace(/<!-- ADD:[^>]+-->/g, '').trim() || 'Ok!');
+      appendChatMsg('assistant', response.trim() || 'Ok!');
     } catch (e) {
-      appendChatMsg('assistant', 'Zyrkel nicht erreichbar. Nutze den Katalog links.');
+      appendChatMsg('assistant', 'Zyrkel nicht erreichbar. Nutze die Karten links.');
     }
   } else {
-    // Offline fallback: keyword matching
     const reply = offlineChatReply(msg);
     appendChatMsg('assistant', reply);
   }
 }
 
-function parseAndApplyFields(text) {
-  const regex = /<!--\s*ADD:([^\s>]+)\s*-->/g;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    const blockId = match[1].trim();
-    if (BLOCK_MAP[blockId]) addBlock(blockId);
-  }
-}
-
 function offlineChatReply(msg) {
   const m = msg.toLowerCase();
-  const added = [];
-  const tryAdd = (id) => { if (BLOCK_MAP[id] && !state.blocks.includes(id)) { addBlock(id); added.push(BLOCK_MAP[id].name); } };
 
-  if (m.includes('schwimm') || m.includes('kurs') || m.includes('webseite') || m.includes('ueberwache') || m.includes('url')) {
-    tryAdd('start-watcher');
-    return 'Habe den Webseiten-Watcher gestartet: ' + added.join(', ');
+  if (m.includes('schwimm') || m.includes('kurs') || m.includes('webseite') || m.includes('ueberwache') || m.includes('beobachte')) {
+    selectIntent('observe');
+    return 'Habe "Beobachten" ausgewaehlt. Beantworte jetzt die Fragen rechts — was beobachtest du, welche Aenderung, wie dringend?';
   }
-  if (m.includes('clinvar') || m.includes('variante') || m.includes('tracker') || m.includes('daten')) {
-    tryAdd('start-tracker');
-    return 'Habe den Daten-Tracker gestartet: ' + added.join(', ');
+  if (m.includes('clinvar') || m.includes('variante') || m.includes('track') || m.includes('metrik') || m.includes('messe')) {
+    selectIntent('measure');
+    return 'Habe "Messen" ausgewaehlt. Waehle jetzt rechts die Details aus.';
   }
-  if (m.includes('email') || m.includes('mail')) {
-    tryAdd('start-mailbot');
-    return 'Habe den Email-Agent gestartet: ' + added.join(', ');
+  if (m.includes('email') || m.includes('mail') || m.includes('reagier')) {
+    selectIntent('react');
+    return 'Habe "Reagieren" ausgewaehlt. Konfiguriere den Trigger und die Aktion rechts.';
   }
-  if (m.includes('pubmed') || m.includes('literatur') || m.includes('forschung')) {
-    tryAdd('start-alert');
-    return 'Habe den Literatur-Alert gestartet: ' + added.join(', ');
+  if (m.includes('news') || m.includes('digest') || m.includes('samml') || m.includes('zusammenfass')) {
+    selectIntent('collect');
+    return 'Habe "Sammeln" ausgewaehlt. Waehle rechts die Quellen und das Format.';
   }
-  if (m.includes('dashboard') || m.includes('chart') || m.includes('visuali')) {
-    tryAdd('theme-dashboard');
-    tryAdd('feat-viz-basic');
-    return 'Habe Dashboard-Theme und Charts hinzugefuegt: ' + added.join(', ');
+  if (m.includes('dashboard') || m.includes('portal') || m.includes('zeig') || m.includes('praesentier')) {
+    selectIntent('present');
+    return 'Habe "Praesentieren" ausgewaehlt. Waehle Design und Komponenten rechts.';
   }
-  return 'Ich kann verschiedene Vorlagen starten: Webseiten-Watcher, Daten-Tracker, Email-Agent, Literatur-Alert. Probier einen Begriff davon.';
+  if (m.includes('erinne') || m.includes('frist') || m.includes('deadline') || m.includes('vergiss')) {
+    selectIntent('remind');
+    return 'Habe "Erinnern" ausgewaehlt. Trage rechts ein woran und wann.';
+  }
+  return 'Ich kann verschiedene Agenten-Typen starten: Beobachten, Messen, Sammeln, Reagieren, Praesentieren, Erinnern. Probier einen Begriff davon.';
 }
 
 $chatSend.addEventListener('click', sendChatMessage);
 $chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
 
-// ─── INIT ────────────────────────────────────────────────────
+// ─── INIT ───────────────────────────────────────────────────
 
 function init() {
-  updateDropdownButton();
-  renderGrid();
+  renderIntentPanel();
   renderEmptyState();
   detectZyrkel();
 }
