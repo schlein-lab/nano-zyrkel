@@ -31,27 +31,30 @@
 <!-- STUDIO (2 columns) -->
 <main class="studio">
 
-  <!-- LEFT: Visual Catalog -->
+  <!-- LEFT: Baukasten -->
   <aside class="baukasten" id="baukasten">
-    <div class="baukasten-tabs" id="baukasten-tabs">
-      <!-- Filled by JS: icon tabs for each category -->
+    <div class="bk-dropdown-wrap" id="bk-dropdown-wrap">
+      <button class="bk-dropdown-btn" id="bk-dropdown-btn">
+        <span class="bk-dropdown-icon" id="bk-dropdown-icon"></span>
+        <span class="bk-dropdown-text" id="bk-dropdown-text"></span>
+        <span class="bk-dropdown-count" id="bk-dropdown-count"></span>
+        <span class="bk-dropdown-arrow">&#9662;</span>
+      </button>
+      <div class="bk-dropdown-list hidden" id="bk-dropdown-list">
+        <!-- Filled by JS -->
+      </div>
     </div>
     <div class="baukasten-search">
-      <input type="text" id="search-input" placeholder="Suchen..." autocomplete="off" spellcheck="false">
+      <input type="text" id="search-input" placeholder="Bausteine suchen..." autocomplete="off" spellcheck="false">
     </div>
     <div class="baukasten-grid" id="baukasten-grid">
       <!-- Filled by JS: visual cards for the active category -->
     </div>
   </aside>
 
-  <!-- RIGHT: Preview Canvas -->
+  <!-- RIGHT: Live Product Preview -->
   <section class="vorschau" id="vorschau">
-    <div class="vorschau-empty" id="vorschau-empty">
-      <div class="empty-icon">&#x2B21;</div>
-      <h2>Klicke auf einen Baustein</h2>
-      <p>Starte mit einer Vorlage oder waehle einzelne Bausteine aus dem Katalog links.</p>
-    </div>
-    <div class="vorschau-content" id="vorschau-content"></div>
+    <div id="preview-canvas" class="preview-canvas"></div>
   </section>
 
 </main>
