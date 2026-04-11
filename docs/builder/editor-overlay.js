@@ -267,6 +267,123 @@
     });
   }
 
+  // ─── RESIZE HANDLES ───────────────────────────────────────────
+
+  var resizeState = { active: false, el: null, handle: '', startX: 0, startY: 0, startW: 0, startH: 0 };
+
+  function addResizeHandles(el) {
+    removeResizeHandles();
+    if (!el) return;
+
+    var handles = ['nz-resize-e', 'nz-resize-s', 'nz-resize-se'];
+    handles.forEach(function(cls) {
+      var h = document.createElement('div');
+      h.className = cls;
+      h.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        resizeState.active = true;
+        resizeState.el = el;
+        resizeState.handle = cls;
+        resizeState.startX = e.clientX;
+        resizeState.startY = e.clientY;
+        var rect = el.getBoundingClientRect();
+        resizeState.startW = rect.width;
+        resizeState.startH = rect.height;
+        document.body.style.cursor = cls === 'nz-resize-e' ? 'ew-resize' : cls === 'nz-resize-s' ? 'ns-resize' : 'nwse-resize';
+      });
+      el.appendChild(h);
+    });
+  }
+
+  function removeResizeHandles() {
+    document.querySelectorAll('.nz-resize-e, .nz-resize-s, .nz-resize-se').forEach(function(h) { h.remove(); });
+  }
+
+  document.addEventListener('mousemove', function(e) {
+    if (!resizeState.active || !resizeState.el) return;
+    var dx = e.clientX - resizeState.startX;
+    var dy = e.clientY - resizeState.startY;
+    var el = resizeState.el;
+
+    if (resizeState.handle === 'nz-resize-e' || resizeState.handle === 'nz-resize-se') {
+      el.style.width = Math.max(60, resizeState.startW + dx) + 'px';
+    }
+    if (resizeState.handle === 'nz-resize-s' || resizeState.handle === 'nz-resize-se') {
+      el.style.height = Math.max(40, resizeState.startH + dy) + 'px';
+    }
+    el.style.maxWidth = 'none';
+    el.style.overflow = 'hidden';
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (resizeState.active && resizeState.el) {
+      parent.postMessage({
+        type: 'nz-resize',
+        id: resizeState.el.dataset.nzId,
+        width: resizeState.el.style.width,
+        height: resizeState.el.style.height
+      }, '*');
+      document.body.style.cursor = '';
+    }
+    resizeState.active = false;
+    resizeState.el = null;
+  });
+
+  // Add handles when selecting
+  var origSelectElement = selectElement;
+  selectElement = function(el) {
+    origSelectElement(el);
+    addResizeHandles(el);
+  };
+
+  // ─── FREE POSITION DRAG (absolute) ──────────────────────────
+
+  var moveState = { active: false, el: null, startX: 0, startY: 0, origLeft: 0, origTop: 0 };
+
+  // Alt+Click to start free-move
+  document.addEventListener('mousedown', function(e) {
+    if (!e.altKey) return;
+    var target = e.target.closest('[data-nz-id]');
+    if (!target) return;
+    e.preventDefault();
+    moveState.active = true;
+    moveState.el = target;
+    moveState.startX = e.clientX;
+    moveState.startY = e.clientY;
+
+    var cs = window.getComputedStyle(target);
+    if (cs.position === 'static') {
+      target.style.position = 'relative';
+    }
+    moveState.origLeft = parseInt(cs.left) || 0;
+    moveState.origTop = parseInt(cs.top) || 0;
+    document.body.style.cursor = 'move';
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!moveState.active || !moveState.el) return;
+    var dx = e.clientX - moveState.startX;
+    var dy = e.clientY - moveState.startY;
+    moveState.el.style.left = (moveState.origLeft + dx) + 'px';
+    moveState.el.style.top = (moveState.origTop + dy) + 'px';
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (moveState.active && moveState.el) {
+      parent.postMessage({
+        type: 'nz-move',
+        id: moveState.el.dataset.nzId,
+        left: moveState.el.style.left,
+        top: moveState.el.style.top,
+        position: moveState.el.style.position
+      }, '*');
+      document.body.style.cursor = '';
+    }
+    moveState.active = false;
+    moveState.el = null;
+  });
+
   // ─── EDITOR OVERLAY CSS ──────────────────────────────────────
   var overlayStyle = document.createElement('style');
   overlayStyle.dataset.nzOverlay = 'true';
@@ -279,7 +396,14 @@
     '.nz-drag-over { outline: 2px dashed #06b6d4 !important; outline-offset: 4px; }',
     '[draggable]:not([contenteditable="true"]) { cursor: grab; }',
     '[draggable]:active { cursor: grabbing; }',
-    '* { transition: outline 0.1s ease; }'
+    '* { transition: outline 0.1s ease; }',
+    '',
+    '/* Resize handles */',
+    '.nz-resize-e, .nz-resize-s, .nz-resize-se { position: absolute; z-index: 10000; background: #8B5CF6; }',
+    '.nz-resize-e { right: -4px; top: 20%; width: 8px; height: 60%; cursor: ew-resize; border-radius: 4px; opacity: 0.7; }',
+    '.nz-resize-s { bottom: -4px; left: 20%; height: 8px; width: 60%; cursor: ns-resize; border-radius: 4px; opacity: 0.7; }',
+    '.nz-resize-se { right: -5px; bottom: -5px; width: 12px; height: 12px; cursor: nwse-resize; border-radius: 3px; opacity: 0.9; }',
+    '.nz-resize-e:hover, .nz-resize-s:hover, .nz-resize-se:hover { opacity: 1; background: #a78bfa; }'
   ].join('\n');
   document.head.appendChild(overlayStyle);
 
