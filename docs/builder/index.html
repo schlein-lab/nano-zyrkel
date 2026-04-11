@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>nano-zyrkel Project Studio</title>
-  <meta name="description" content="Baue autonome Agenten visuell — Was willst du erreichen?">
+  <title>nano-zyrkel Visual Studio</title>
+  <meta name="description" content="Visueller Editor fuer nano-zyrkel Templates">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,60 +15,64 @@
 <header class="header">
   <div class="header-left">
     <span class="header-mark">&#x2B21;</span>
-    <span class="header-title">nano-zyrkel</span>
-    <span class="header-tag">project studio</span>
+    <span class="header-title">nano-zyrkel visual studio</span>
+    <div class="header-sep"></div>
+    <div class="header-dropdown" id="scaffold-dropdown">
+      <button class="btn-dropdown" id="btn-scaffold">Dashboard + Pipeline <span class="chevron">&#x25BE;</span></button>
+      <div class="dropdown-menu" id="scaffold-menu"></div>
+    </div>
+    <div class="header-dropdown" id="theme-dropdown">
+      <button class="btn-dropdown" id="btn-theme">Dashboard <span class="chevron">&#x25BE;</span></button>
+      <div class="dropdown-menu" id="theme-menu"></div>
+    </div>
   </div>
   <div class="header-right">
     <div class="zyrkel-status" id="zyrkel-status" title="Zyrkel nicht verbunden">
       <span class="status-dot offline"></span>
       <span class="status-label" id="status-label">Offline</span>
     </div>
-    <button class="btn-header" id="btn-code" title="Generierten Code anzeigen">Code anzeigen</button>
-    <button class="btn-header btn-primary hidden" id="btn-deploy" title="Direkt deployen">Jetzt deployen</button>
+    <button class="btn-header" id="btn-code">Code anzeigen</button>
+    <button class="btn-header btn-primary" id="btn-deploy">Jetzt deployen</button>
   </div>
 </header>
 
-<!-- STUDIO (2 columns) -->
-<main class="studio">
-
-  <!-- LEFT: Intent Panel -->
-  <aside class="intent-panel" id="intent-panel">
-    <div class="intent-panel-header">Was willst du erreichen?</div>
-    <div class="intent-cards" id="intent-cards">
-      <!-- Filled by JS: 7 intent cards -->
-    </div>
-  </aside>
-
-  <!-- RIGHT: Build Panel -->
-  <section class="build-panel" id="build-panel">
-    <!-- Empty state -> Layer 2 questions -> Layer 3 preview -->
-  </section>
-
+<!-- STUDIO (3-column grid) -->
+<main class="studio" id="studio">
+  <aside class="toolbox" id="toolbox"></aside>
+  <div class="canvas-wrap">
+    <div class="canvas-loader" id="canvas-loader"><div class="spinner"></div><span>Lade Template...</span></div>
+    <iframe id="canvas" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+  <aside class="properties hidden" id="properties"></aside>
 </main>
 
+<!-- PAGE BAR -->
+<div class="page-bar" id="page-bar">
+  <div class="page-tabs" id="page-tabs"></div>
+  <button class="page-add" id="page-add" title="Neue Seite">+</button>
+</div>
+
 <!-- CODE DRAWER -->
-<div class="code-drawer" id="code-drawer">
+<div class="code-drawer hidden" id="code-drawer">
   <div class="drawer-header">
-    <div class="drawer-tabs">
+    <div class="drawer-tabs" id="drawer-tabs">
       <button class="drawer-tab active" data-tab="config">config.json</button>
+      <button class="drawer-tab" data-tab="html">index.html</button>
+      <button class="drawer-tab" data-tab="css">style.css</button>
       <button class="drawer-tab" data-tab="workflow">run.yml</button>
       <button class="drawer-tab" data-tab="readme">README.md</button>
     </div>
     <div class="drawer-actions">
-      <button class="btn-copy" id="btn-copy" title="Kopieren">Kopieren</button>
-      <button class="btn-close-drawer" id="btn-close-drawer" title="Schliessen">&times;</button>
+      <button class="btn-copy" id="btn-copy">Kopieren</button>
+      <button class="btn-close-drawer" id="btn-close-drawer">&times;</button>
     </div>
   </div>
   <div class="drawer-body">
     <pre class="drawer-code" id="drawer-code"></pre>
   </div>
-  <div class="drawer-footer" id="drawer-footer">
-    <h4>Naechste Schritte</h4>
-    <ol id="next-steps"></ol>
-  </div>
 </div>
 
-<!-- LLM CHAT FAB -->
+<!-- LLM CHAT -->
 <button class="chat-fab" id="chat-fab" title="KI-Assistent">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -81,11 +85,12 @@
   </div>
   <div class="chat-messages" id="chat-messages"></div>
   <div class="chat-input-row">
-    <input type="text" id="chat-input" placeholder="Beschreibe was du bauen willst..." autocomplete="off">
+    <input type="text" id="chat-input" placeholder="Beschreibe eine Aenderung..." autocomplete="off">
     <button class="chat-send" id="chat-send">&#x27A4;</button>
   </div>
 </div>
 
+<script src="sample-data.js"></script>
 <script src="builder.js"></script>
 </body>
 </html>
