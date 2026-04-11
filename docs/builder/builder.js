@@ -820,6 +820,119 @@ function insertElement(insertId) {
 
 // ─── DATA SOURCE MODAL ─────────────────────────────────────────
 
+function renderTypeFields(type, existing) {
+  var v = function(key) { return existing && existing[key] ? escapeAttr(existing[key]) : ''; };
+  var html = '';
+
+  switch (type) {
+    case 'api':
+      html += '<label class="ds-modal-label">API URL</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="url" placeholder="https://api.example.com/data" value="' + v('url') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">HTTP Methode</label>';
+      html += '<select class="ds-modal-select ds-field" data-key="method"><option value="GET"' + (v('method') === 'POST' ? '' : ' selected') + '>GET</option><option value="POST"' + (v('method') === 'POST' ? ' selected' : '') + '>POST</option></select>';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Headers (optional, JSON)</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="headers" placeholder=\'{"Authorization": "Bearer ..."}\' value="' + v('headers') + '">';
+      break;
+
+    case 'rss':
+      html += '<label class="ds-modal-label">Feed URL</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="url" placeholder="https://example.com/feed.xml" value="' + v('url') + '">';
+      break;
+
+    case 'clinvar':
+      html += '<label class="ds-modal-label">Gene (kommagetrennt)</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="genes" placeholder="BRCA1, TP53, MLH1" value="' + v('genes') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Max. Varianten pro Lauf</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="max_variants" type="number" placeholder="500" value="' + (v('max_variants') || '500') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Reklassifikationen melden</label>';
+      html += '<select class="ds-modal-select ds-field" data-key="notify_reclassifications"><option value="true" selected>Ja</option><option value="false">Nein</option></select>';
+      break;
+
+    case 'pubmed':
+      html += '<label class="ds-modal-label">Suchbegriffe</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="query" placeholder="structural variants AND segmental duplications" value="' + v('query') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Quellen</label>';
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">';
+      ['PubMed', 'bioRxiv', 'medRxiv', 'CrossRef'].forEach(function(src) {
+        var checked = !existing || !existing.sources || existing.sources.indexOf(src.toLowerCase()) !== -1;
+        html += '<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="ds-field-check" data-source="' + src.toLowerCase() + '"' + (checked ? ' checked' : '') + '> ' + src + '</label>';
+      });
+      html += '</div>';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Max. Ergebnisse pro Quelle</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="max_results" type="number" placeholder="20" value="' + (v('max_results') || '20') + '">';
+      break;
+
+    case 'github':
+      html += '<label class="ds-modal-label">Repository</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="repo" placeholder="user/repo" value="' + v('repo') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Was abrufen?</label>';
+      html += '<select class="ds-modal-select ds-field" data-key="resource"><option value="issues">Issues</option><option value="pulls">Pull Requests</option><option value="releases">Releases</option><option value="commits">Commits</option></select>';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">GitHub Token Secret-Name</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="token_secret" placeholder="GH_TOKEN" value="' + (v('token_secret') || 'GH_TOKEN') + '">';
+      break;
+
+    case 'email':
+      html += '<label class="ds-modal-label">IMAP Host</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="imap_host" placeholder="imap.gmail.com" value="' + v('imap_host') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">IMAP Port</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="imap_port" type="number" placeholder="993" value="' + (v('imap_port') || '993') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Benutzer</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="user" placeholder="user@example.com" value="' + v('user') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Passwort Secret-Name</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="password_secret" placeholder="IMAP_PASSWORD" value="' + (v('password_secret') || 'IMAP_PASSWORD') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">SMTP Host (fuer Antworten)</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="smtp_host" placeholder="smtp.gmail.com" value="' + v('smtp_host') + '">';
+      break;
+
+    case 's3':
+      html += '<label class="ds-modal-label">Bucket</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="bucket" placeholder="mein-bucket" value="' + v('bucket') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Region</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="region" placeholder="eu-central-1" value="' + (v('region') || 'eu-central-1') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Key / Prefix</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="key_prefix" placeholder="data/exports/" value="' + v('key_prefix') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">AWS Credentials Secret-Name</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="aws_secret" placeholder="AWS_ACCESS_KEY_ID" value="' + (v('aws_secret') || 'AWS_ACCESS_KEY_ID') + '">';
+      break;
+
+    case 'db':
+      html += '<label class="ds-modal-label">Datenbank-Typ</label>';
+      html += '<select class="ds-modal-select ds-field" data-key="db_type"><option value="postgres">PostgreSQL</option><option value="sqlite">SQLite</option><option value="mysql">MySQL</option></select>';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">Connection String Secret-Name</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="connection_secret" placeholder="DATABASE_URL" value="' + (v('connection_secret') || 'DATABASE_URL') + '">';
+      html += '<label class="ds-modal-label" style="margin-top:10px;">SQL-Query</label>';
+      html += '<textarea class="ds-modal-input ds-field" data-key="query" rows="3" placeholder="SELECT * FROM metrics ORDER BY created_at DESC LIMIT 100" style="font-family:var(--mono);resize:vertical;">' + (existing && existing.query ? escapeHtml(existing.query) : '') + '</textarea>';
+      break;
+
+    case 'staging':
+      html += '<label class="ds-modal-label">Pfad (relativ zum Repo)</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="path" placeholder="staging/latest.json" value="' + (v('path') || 'staging/latest.json') + '">';
+      html += '<p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Staging-Daten werden automatisch vom nano-zyrkel Binary erzeugt und per Git committed.</p>';
+      break;
+
+    default:
+      html += '<label class="ds-modal-label">URL</label>';
+      html += '<input class="ds-modal-input ds-field" data-key="url" placeholder="https://..." value="' + v('url') + '">';
+  }
+
+  return html;
+}
+
+function collectTypeFields() {
+  var data = {};
+  document.querySelectorAll('.ds-field').forEach(function(el) {
+    var key = el.dataset.key;
+    if (key) data[key] = el.value;
+  });
+  // Collect checkbox sources for pubmed
+  var sources = [];
+  document.querySelectorAll('.ds-field-check:checked').forEach(function(el) {
+    sources.push(el.dataset.source);
+  });
+  if (sources.length > 0) data.sources = sources;
+  return data;
+}
+
 function openDataSourceModal(editId) {
   state.dsModalOpen = true;
   state.dsModalEdit = editId || null;
@@ -865,10 +978,9 @@ function openDataSourceModal(editId) {
   html += '</div>';
   html += '</div>';
 
-  // URL / Connection
-  html += '<div class="ds-modal-section">';
-  html += '<label class="ds-modal-label">URL / Verbindung</label>';
-  html += '<input class="ds-modal-input" id="ds-url" placeholder="https://eutils.ncbi.nlm.nih.gov/..." value="' + escapeAttr(currentUrl) + '">';
+  // Type-specific fields (dynamic, re-rendered on type change)
+  html += '<div class="ds-modal-section" id="ds-type-fields">';
+  html += renderTypeFields(currentType, existing);
   html += '</div>';
 
   // Schedule
@@ -919,12 +1031,14 @@ function openDataSourceModal(editId) {
   document.getElementById('ds-modal-close').addEventListener('click', closeDataSourceModal);
   document.getElementById('ds-cancel-btn').addEventListener('click', closeDataSourceModal);
 
-  // Type selection
+  // Type selection — re-render fields on type change
   document.querySelectorAll('.ds-type-card').forEach(function(card) {
     card.addEventListener('click', function() {
       document.querySelectorAll('.ds-type-card').forEach(function(c) { c.classList.remove('ds-type-card-selected'); });
       card.classList.add('ds-type-card-selected');
       selectedType = card.dataset.typeId;
+      var fieldsContainer = document.getElementById('ds-type-fields');
+      if (fieldsContainer) fieldsContainer.innerHTML = renderTypeFields(selectedType, null);
     });
   });
 
@@ -937,9 +1051,10 @@ function openDataSourceModal(editId) {
 
   // Test button
   document.getElementById('ds-test-btn').addEventListener('click', function() {
-    var url = document.getElementById('ds-url').value.trim();
+    var fields = collectTypeFields();
+    var url = fields.url || fields.repo || fields.bucket || fields.imap_host || fields.path || '';
     if (!url) {
-      document.getElementById('ds-test-status').textContent = 'Bitte URL eingeben';
+      document.getElementById('ds-test-status').textContent = 'Bitte Verbindungsdaten eingeben';
       document.getElementById('ds-test-status').style.color = '#ef4444';
       return;
     }
@@ -973,24 +1088,25 @@ function openDataSourceModal(editId) {
   // Save
   document.getElementById('ds-save-btn').addEventListener('click', function() {
     var name = document.getElementById('ds-name').value.trim() || 'Neue Quelle';
-    var url = document.getElementById('ds-url').value.trim();
     var schedule = document.getElementById('ds-schedule').value.trim() || '0 */3 * * *';
+    var typeFields = collectTypeFields();
 
     // Determine sample data based on type
     var sampleData = null;
-    if (selectedType === 'clinvar' || selectedType === 'database') sampleData = SAMPLE_DATA.table;
+    if (selectedType === 'clinvar' || selectedType === 'db') sampleData = SAMPLE_DATA.table;
     else if (selectedType === 'rss' || selectedType === 'pubmed') sampleData = SAMPLE_DATA.feeds;
     else if (selectedType === 'github') sampleData = SAMPLE_DATA.trend;
     else if (selectedType === 'staging') sampleData = SAMPLE_DATA;
+    else sampleData = SAMPLE_DATA.trend;
+
+    var dsConfig = { name: name, type: selectedType, schedule: schedule, sampleData: sampleData };
+    // Merge type-specific fields
+    Object.keys(typeFields).forEach(function(k) { dsConfig[k] = typeFields[k]; });
 
     if (existing) {
-      existing.name = name;
-      existing.type = selectedType;
-      existing.url = url;
-      existing.schedule = schedule;
-      if (sampleData) existing.sampleData = sampleData;
+      Object.keys(dsConfig).forEach(function(k) { existing[k] = dsConfig[k]; });
     } else {
-      addDataSource({ name: name, type: selectedType, url: url, schedule: schedule, sampleData: sampleData });
+      addDataSource(dsConfig);
     }
     renderToolbox();
     closeDataSourceModal();
