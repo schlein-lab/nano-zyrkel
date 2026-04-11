@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>nano-zyrkel Project Studio</title>
-  <meta name="description" content="Baue autonome Agenten visuell — Datenquellen, Bedingungen, Benachrichtigungen zusammenstecken.">
+  <meta name="description" content="Baue autonome Agenten visuell — Was willst du erreichen?">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -31,30 +31,17 @@
 <!-- STUDIO (2 columns) -->
 <main class="studio">
 
-  <!-- LEFT: Baukasten -->
-  <aside class="baukasten" id="baukasten">
-    <div class="bk-dropdown-wrap" id="bk-dropdown-wrap">
-      <button class="bk-dropdown-btn" id="bk-dropdown-btn">
-        <span class="bk-dropdown-icon" id="bk-dropdown-icon"></span>
-        <span class="bk-dropdown-text" id="bk-dropdown-text"></span>
-        <span class="bk-dropdown-count" id="bk-dropdown-count"></span>
-        <span class="bk-dropdown-arrow">&#9662;</span>
-      </button>
-      <div class="bk-dropdown-list hidden" id="bk-dropdown-list">
-        <!-- Filled by JS -->
-      </div>
-    </div>
-    <div class="baukasten-search">
-      <input type="text" id="search-input" placeholder="Bausteine suchen..." autocomplete="off" spellcheck="false">
-    </div>
-    <div class="baukasten-grid" id="baukasten-grid">
-      <!-- Filled by JS: visual cards for the active category -->
+  <!-- LEFT: Intent Panel -->
+  <aside class="intent-panel" id="intent-panel">
+    <div class="intent-panel-header">Was willst du erreichen?</div>
+    <div class="intent-cards" id="intent-cards">
+      <!-- Filled by JS: 7 intent cards -->
     </div>
   </aside>
 
-  <!-- RIGHT: Live Product Preview -->
-  <section class="vorschau" id="vorschau">
-    <div id="preview-canvas" class="preview-canvas"></div>
+  <!-- RIGHT: Build Panel -->
+  <section class="build-panel" id="build-panel">
+    <!-- Empty state -> Layer 2 questions -> Layer 3 preview -->
   </section>
 
 </main>
