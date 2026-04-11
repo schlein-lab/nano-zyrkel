@@ -479,14 +479,22 @@ function miniStarter(icon, title, accent) {
   </div>`;
 }
 
-function miniStarterWatcher() { return miniStarter('&#x1F441;&#xFE0F;', 'URL + Alert', '#06b6d4'); }
-function miniStarterTracker() { return miniStarter('&#x1F4C8;', 'Daten + Chart', '#8b5cf6'); }
-function miniStarterLearn()   { return miniStarter('&#x1F393;', '10 Module', '#2563eb'); }
-function miniStarterMail()    { return miniStarter('&#x1F916;', 'Email + LLM', '#8b5cf6'); }
-function miniStarterPortal()  { return miniStarter('&#x2728;', 'Card Grid', '#ec4899'); }
-function miniStarterAlert()   { return miniStarter('&#x1F4E7;', 'PubMed Digest', '#22c55e'); }
-function miniStarterApiMon()  { return miniStarter('&#x1F50C;', 'API Health', '#f59e0b'); }
-function miniStarterNewsletter() { return miniStarter('&#x1F4F0;', 'Weekly Digest', '#b45309'); }
+function miniStarterPageAlert()   { return miniStarter('&#x1F514;', 'Seite beobachten', '#06b6d4'); }
+function miniStarterPriceTrack()  { return miniStarter('&#x1F4B0;', 'Preis verfolgen', '#22c55e'); }
+function miniStarterAvailWatch()  { return miniStarter('&#x1F3AB;', 'Verfuegbarkeit', '#f59e0b'); }
+function miniStarterApiHealth()   { return miniStarter('&#x1F50C;', 'API-Status', '#ef4444'); }
+function miniStarterRssDigest()   { return miniStarter('&#x1F4F0;', 'News-Digest', '#b45309'); }
+function miniStarterFormWatch()   { return miniStarter('&#x1F4DD;', 'Formular offen?', '#8b5cf6'); }
+function miniStarterJobAlert()    { return miniStarter('&#x1F4BC;', 'Neue Stellen', '#06b6d4'); }
+function miniStarterDashboard()   { return miniStarter('&#x1F4CA;', 'Live-Dashboard', '#8b5cf6'); }
+function miniStarterMailBot()     { return miniStarter('&#x1F4E7;', 'Email-Bot', '#ec4899'); }
+function miniStarterDeadline()    { return miniStarter('&#x23F0;', 'Frist-Erinnerer', '#f59e0b'); }
+function miniStarterSocialWatch() { return miniStarter('&#x1F4AC;', 'Erwaehnung finden', '#06b6d4'); }
+function miniStarterPortal()      { return miniStarter('&#x2728;', 'Projekt-Portal', '#8b5cf6'); }
+function miniStarterCertExpiry()  { return miniStarter('&#x1F512;', 'SSL-Ablauf', '#ef4444'); }
+function miniStarterStockAlert()  { return miniStarter('&#x1F4C8;', 'Kurs-Alert', '#22c55e'); }
+function miniStarterWeatherBot()  { return miniStarter('&#x26C5;', 'Wetter-Bot', '#06b6d4'); }
+function miniStarterCompetitor()  { return miniStarter('&#x1F50D;', 'Konkurrenz-Watch', '#f59e0b'); }
 
 // ─── CATEGORIES & BLOCKS ─────────────────────────────────────
 
@@ -494,38 +502,86 @@ const CATEGORIES = [
   {
     id: 'showcase', name: 'Start', icon: '\u2728',
     blocks: [
-      { id: 'start-watcher', name: 'Webseiten-Watcher', desc: 'URL ueberwachen + benachrichtigen',
+      { id: 'start-page-alert', name: 'Webseite beobachten', desc: 'Benachrichtigung wenn sich eine Seite aendert',
         starter: true, design: 'theme-minimal',
         autoBlocks: ['src-url', 'cond-contains', 'sched-hourly', 'notify-telegram', 'notify-silence'],
-        visual: miniStarterWatcher },
-      { id: 'start-tracker', name: 'Daten-Tracker', desc: '4.4M Varianten tracken',
+        visual: miniStarterPageAlert },
+      { id: 'start-price-track', name: 'Preis verfolgen', desc: 'Alert wenn ein Preis steigt oder faellt',
         starter: true, design: 'theme-dashboard',
-        autoBlocks: ['src-clinvar', 'cond-changed', 'sched-3h', 'notify-telegram', 'feat-data', 'feat-viz-basic'],
-        visual: miniStarterTracker },
-      { id: 'start-helix', name: 'Lernplattform', desc: '10-Modul Genetik-Suite',
-        starter: true, design: 'theme-clinical',
-        autoBlocks: ['src-api', 'sched-daily', 'feat-viz-basic', 'feat-plugin'],
-        visual: miniStarterLearn },
-      { id: 'start-mailbot', name: 'Email-Agent', desc: 'LLM-Email mit Approval',
+        autoBlocks: ['src-url', 'cond-threshold', 'sched-hourly', 'notify-telegram'],
+        visual: miniStarterPriceTrack },
+      { id: 'start-avail-watch', name: 'Verfuegbarkeit pruefen', desc: 'Kurs, Ticket, Termin — sofort Bescheid',
         starter: true, design: 'theme-minimal',
-        autoBlocks: ['src-imap', 'cond-llm', 'sched-15min', 'notify-telegram'],
-        visual: miniStarterMail },
-      { id: 'start-portal', name: 'Portal / Showcase', desc: 'Animiertes Projekt-Hub',
-        starter: true, design: 'theme-cinematic',
-        autoBlocks: ['src-github', 'sched-daily', 'act-publish'],
-        visual: miniStarterPortal },
-      { id: 'start-alert', name: 'Literatur-Alert', desc: 'PubMed-Recherche-Bot',
-        starter: true, design: 'theme-magazine',
-        autoBlocks: ['src-pubmed', 'cond-rss', 'sched-daily', 'notify-email'],
-        visual: miniStarterAlert },
-      { id: 'start-apimon', name: 'API-Monitor', desc: 'Endpunkt-Gesundheit pruefen',
+        autoBlocks: ['src-url', 'cond-contains', 'sched-15min', 'notify-telegram', 'notify-silence'],
+        visual: miniStarterAvailWatch },
+      { id: 'start-api-health', name: 'API-Status ueberwachen', desc: 'Uptime, Antwortzeit, Fehler erkennen',
         starter: true, design: 'theme-dashboard',
         autoBlocks: ['src-api', 'cond-threshold', 'sched-5min', 'notify-slack', 'feat-viz-basic'],
-        visual: miniStarterApiMon },
-      { id: 'start-newsletter', name: 'Newsletter-Digest', desc: 'Woechentliche Zusammenfassung',
+        visual: miniStarterApiHealth },
+      { id: 'start-rss-digest', name: 'News zusammenfassen', desc: 'RSS-Feeds taeglich als Digest erhalten',
         starter: true, design: 'theme-magazine',
-        autoBlocks: ['src-rss', 'sched-weekly', 'notify-email', 'act-publish'],
-        visual: miniStarterNewsletter },
+        autoBlocks: ['src-rss', 'cond-rss', 'sched-daily-morning', 'notify-email'],
+        visual: miniStarterRssDigest },
+      { id: 'start-form-watch', name: 'Formular offen?', desc: 'Anmeldung, Registrierung — wird freigeschaltet?',
+        starter: true, design: 'theme-minimal',
+        autoBlocks: ['src-url', 'cond-css', 'sched-15min', 'notify-telegram', 'notify-silence'],
+        visual: miniStarterFormWatch },
+      { id: 'start-job-alert', name: 'Stellenangebote', desc: 'Neue Jobs auf einer Karriereseite finden',
+        starter: true, design: 'theme-minimal',
+        autoBlocks: ['src-url', 'cond-changed', 'sched-daily-morning', 'notify-email'],
+        visual: miniStarterJobAlert },
+      { id: 'start-dashboard', name: 'Live-Dashboard', desc: 'Daten sammeln + als Website visualisieren',
+        starter: true, design: 'theme-dashboard',
+        autoBlocks: ['src-api', 'sched-3h', 'feat-data', 'feat-viz-basic', 'act-publish'],
+        visual: miniStarterDashboard },
+      { id: 'start-mailbot', name: 'Email-Assistent', desc: 'Emails lesen, analysieren, antworten lassen',
+        starter: true, design: 'theme-minimal',
+        autoBlocks: ['src-imap', 'cond-llm', 'sched-15min', 'notify-telegram'],
+        visual: miniStarterMailBot },
+      { id: 'start-deadline', name: 'Frist-Erinnerer', desc: 'Countdown + gestaffelte Erinnerungen',
+        starter: true, design: 'theme-minimal',
+        autoBlocks: ['src-url', 'cond-deadline', 'sched-daily-morning', 'notify-telegram'],
+        visual: miniStarterDeadline },
+      { id: 'start-social', name: 'Erwaehnungen finden', desc: 'Marke, Name, Produkt — wer redet darueber?',
+        starter: true, design: 'theme-minimal',
+        autoBlocks: ['src-url', 'cond-contains', 'sched-3h', 'notify-telegram'],
+        visual: miniStarterSocialWatch },
+      { id: 'start-portal', name: 'Projekt-Portal', desc: 'Hub-Seite fuer deine Projekte',
+        starter: true, design: 'theme-cinematic',
+        autoBlocks: ['src-github', 'sched-daily-morning', 'act-publish'],
+        visual: miniStarterPortal },
+      { id: 'start-cert', name: 'SSL-Ablauf pruefen', desc: 'Zertifikat laeuft ab? Rechtzeitig warnen',
+        starter: true, design: 'theme-dashboard',
+        autoBlocks: ['src-url', 'cond-deadline', 'sched-daily-morning', 'notify-slack'],
+        visual: miniStarterCertExpiry },
+      { id: 'start-stock', name: 'Kurs-Benachrichtigung', desc: 'Aktie, Crypto, Index — Schwellwert-Alert',
+        starter: true, design: 'theme-dashboard',
+        autoBlocks: ['src-api', 'cond-threshold', 'sched-hourly', 'notify-telegram', 'feat-viz-basic'],
+        visual: miniStarterStockAlert },
+      { id: 'start-weather', name: 'Wetter-Bot', desc: 'Taegliche Wettervorhersage per Telegram',
+        starter: true, design: 'theme-minimal',
+        autoBlocks: ['src-api', 'sched-daily-morning', 'notify-telegram'],
+        visual: miniStarterWeatherBot },
+      { id: 'start-competitor', name: 'Konkurrenz beobachten', desc: 'Webseite eines Wettbewerbers tracken',
+        starter: true, design: 'theme-minimal',
+        autoBlocks: ['src-url', 'cond-changed', 'sched-daily-morning', 'notify-email'],
+        visual: miniStarterCompetitor },
+      { id: 'start-custom-simple', name: 'Einfacher Agent', desc: 'Leer starten — nur Quelle + Bedingung + Alert',
+        starter: true, design: 'theme-minimal',
+        autoBlocks: ['src-url', 'sched-daily-morning', 'notify-telegram'],
+        visual: () => miniStarter('&#x1F680;', 'Einfach starten', '#8b5cf6') },
+      { id: 'start-custom-dashboard', name: 'Dashboard bauen', desc: 'Leer starten — mit Visualisierung',
+        starter: true, design: 'theme-dashboard',
+        autoBlocks: ['src-api', 'sched-3h', 'feat-data', 'feat-viz-basic'],
+        visual: () => miniStarter('&#x1F3A8;', 'Dashboard leer', '#06b6d4') },
+      { id: 'start-custom-pipeline', name: 'Daten-Pipeline', desc: 'Leer starten — Daten holen, verarbeiten, speichern',
+        starter: true, design: 'theme-minimal',
+        autoBlocks: ['src-api', 'sched-daily-morning', 'act-s3'],
+        visual: () => miniStarter('&#x1F504;', 'Pipeline leer', '#22c55e') },
+      { id: 'start-custom-blank', name: 'Komplett leer', desc: 'Ganz von vorne — jedes Teil selbst waehlen',
+        starter: true, design: 'theme-cardgrid',
+        autoBlocks: [],
+        visual: () => miniStarter('&#x2795;', 'Leer starten', '#94a3b8') },
     ]
   },
   {
