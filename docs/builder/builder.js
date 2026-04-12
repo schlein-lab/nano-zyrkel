@@ -661,20 +661,52 @@ function loadEditorAssets() {
 }
 
 // ─── ZYRKEL DETECTION ──────────────────────────────────────────
+// Strategy: Try URL param ?port=X first, then probe default 37848,
+// then query registry via first found port to discover all instances.
 
 function detectZyrkel() {
-  var ports = [37848, 37849, 37850, 37851, 37852, 37853];
-  var checks = ports.map(function(port) {
-    return fetch('http://localhost:' + port + '/api/health', { signal: AbortSignal.timeout(2000) })
-      .then(function(r) { return r.ok ? port : null; })
-      .catch(function() { return null; });
+  // 1. Check URL param
+  var urlPort = new URLSearchParams(window.location.search).get('port');
+  if (urlPort) {
+    return probePort(parseInt(urlPort)).then(function(ok) {
+      return ok ? parseInt(urlPort) : probeDefaultPort();
+    });
+  }
+  // 2. Probe default service port
+  return probeDefaultPort();
+}
+
+function probePort(port) {
+  return fetch('http://localhost:' + port + '/api/health', { signal: AbortSignal.timeout(2000) })
+    .then(function(r) { return r.ok; })
+    .catch(function() { return false; });
+}
+
+function probeDefaultPort() {
+  return probePort(37848).then(function(ok) {
+    if (ok) return 37848;
+    // Try a small range as last resort
+    return probePort(37849).then(function(ok2) {
+      if (ok2) return 37849;
+      return probePort(37850).then(function(ok3) {
+        return ok3 ? 37850 : null;
+      });
+    });
   });
-  return Promise.all(checks).then(function(results) {
-    for (var i = 0; i < results.length; i++) {
-      if (results[i]) return results[i];
-    }
-    return null;
-  });
+}
+
+function queryRegistry(port) {
+  // Once we have a port, query the registry for all instances
+  return fetch('http://localhost:' + port + '/api/dashboard/registry', { signal: AbortSignal.timeout(3000) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      state.registryInstances = Array.isArray(data) ? data : (data.instances || []);
+      return state.registryInstances;
+    })
+    .catch(function() {
+      state.registryInstances = [];
+      return [];
+    });
 }
 
 function updateZyrkelStatus(port) {
@@ -682,9 +714,33 @@ function updateZyrkelStatus(port) {
   if (port) {
     statusDot.classList.add('online');
     statusLabel.textContent = 'Zyrkel :' + port;
+    statusLabel.style.cursor = 'pointer';
+    statusLabel.title = 'Klicke um Port zu aendern';
+    statusLabel.onclick = promptPort;
+    // Query full registry
+    queryRegistry(port);
   } else {
     statusDot.classList.remove('online');
-    statusLabel.textContent = 'Offline';
+    statusLabel.textContent = 'Offline — klicke fuer manuellen Port';
+    statusLabel.style.cursor = 'pointer';
+    statusLabel.title = 'Klicke um Port manuell einzugeben';
+    statusLabel.onclick = promptPort;
+  }
+}
+
+function promptPort() {
+  var input = prompt('Zyrkel-Port eingeben (z.B. 37848):', state.zyrkelPort || '37848');
+  if (input && !isNaN(parseInt(input))) {
+    var port = parseInt(input);
+    probePort(port).then(function(ok) {
+      if (ok) {
+        updateZyrkelStatus(port);
+        if (chatMessages.querySelector('.chat-welcome')) renderWelcome();
+        addSystemMessage('Zyrkel verbunden auf Port ' + port + ' — volle KI-Unterstuetzung aktiv.');
+      } else {
+        alert('Kein Zyrkel auf Port ' + port + ' gefunden. Stelle sicher dass der Zyrkel laeuft und CORS fuer github.io erlaubt ist.');
+      }
+    });
   }
 }
 
