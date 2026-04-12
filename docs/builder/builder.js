@@ -683,15 +683,17 @@ function probePort(port) {
 }
 
 function probeDefaultPort() {
-  return probePort(37848).then(function(ok) {
-    if (ok) return 37848;
-    // Try a small range as last resort
-    return probePort(37849).then(function(ok2) {
-      if (ok2) return 37849;
-      return probePort(37850).then(function(ok3) {
-        return ok3 ? 37850 : null;
-      });
-    });
+  // Scan the full zyrkel port range in parallel
+  var ports = [];
+  for (var p = 37848; p <= 37870; p++) ports.push(p);
+  var checks = ports.map(function(port) {
+    return probePort(port).then(function(ok) { return ok ? port : null; });
+  });
+  return Promise.all(checks).then(function(results) {
+    for (var i = 0; i < results.length; i++) {
+      if (results[i]) return results[i];
+    }
+    return null;
   });
 }
 
