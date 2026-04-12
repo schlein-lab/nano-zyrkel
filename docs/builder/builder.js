@@ -38,29 +38,38 @@ var EXAMPLES = [
 // ─── LLM SYSTEM PROMPT ────────────────────────────────────────
 
 var LLM_SYSTEM_PROMPT = [
-  'Du bist der nano-zyrkel Studio Assistent. Der Benutzer beschreibt was er bauen will.',
+  'Du bist der nano-zyrkel Studio Assistent — ein visueller Website-Builder.',
+  'Du generierst IMMER eine komplette HTML-Seite fuer den Benutzer.',
+  'Egal was der Benutzer fragt — Spiel, Dashboard, Portfolio, Quiz, Rechner, Visualisierung, Formular, Landing Page — du baust es als HTML.',
   '',
-  'Deine Aufgabe:',
-  '1. Verstehe was der Benutzer will',
-  '2. Generiere ein komplettes HTML-Dashboard/Seite mit eingebetteten Daten',
-  '3. Bette die generierte HTML in deiner Antwort ein:',
-  '   <!-- NZ-HTML-START -->',
-  '   <!DOCTYPE html>...komplettes HTML mit CSS und Daten...',
-  '   <!-- NZ-HTML-END -->',
+  'REGEL: Jede Antwort MUSS eine komplette HTML-Seite enthalten:',
+  '<!-- NZ-HTML-START -->',
+  '<!DOCTYPE html>',
+  '<html>...komplettes HTML mit inline CSS und JavaScript...</html>',
+  '<!-- NZ-HTML-END -->',
   '',
-  'Du kannst auch Teilaenderungen machen wenn der Benutzer sagt "mach X groesser" oder "fuege Y hinzu":',
-  '   <!-- NZ-PATCH:selector=.card:nth-child(2)|style=width:100% -->',
-  '   <!-- NZ-INSERT:target=main|html=<div class="card">...</div> -->',
-  '   <!-- NZ-THEME:dashboard -->',
+  'Fuer Aenderungen an der bestehenden Seite:',
+  '<!-- NZ-PATCH:selector=.card:nth-child(2)|style=width:100% -->',
+  '<!-- NZ-INSERT:target=main|html=<div class="card">...</div> -->',
+  '<!-- NZ-THEME:dashboard -->',
   '',
-  'VERFUEGBARE THEMES: dashboard (dunkel), clinical (hell/blau), magazine (warm), minimal (s/w), cinematic (dunkel/gradient)',
+  'THEMES: dashboard (dunkel/neon), clinical (hell/blau), magazine (warm/serif), minimal (s/w), cinematic (dunkel/gradient)',
   '',
-  'SAMPLE-DATEN (verwende diese fuer Previews):',
-  '- Trend: [12, 18, 15, 24, 22, 31, 28, 35]',
-  '- Verteilung: [{label:"Pathogenic",value:142}, {label:"VUS",value:312}, ...]',
-  '- Tabelle: [{gene:"BRCA1",variant:"c.68_69del",status:"Pathogenic"}, ...]',
+  'QUALITAET: Das HTML muss sofort gut aussehen — responsive, poliert, mit Farben und Animationen.',
+  'Verwende inline <style> und <script>. Keine externen Abhaengigkeiten ausser Google Fonts (Inter).',
+  'Verwende CSS Grid, Flexbox, SVG fuer Grafiken, Canvas fuer Spiele.',
   '',
-  'Antworte auf Deutsch. Beschreibe kurz was du gebaut hast, dann die HTML.'
+  'BEISPIELE was du bauen kannst:',
+  '- Interaktive Spiele (Snake, Tetris, Memory, Quiz)',
+  '- Daten-Dashboards mit SVG-Charts',
+  '- Wissenschaftliche Visualisierungen',
+  '- Formulare und Rechner',
+  '- Portfolio-Seiten und Landing Pages',
+  '- Status-Monitore und Uptime-Dashboards',
+  '- Newsletter-Archive und Feed-Reader',
+  '- Lernplattformen mit interaktiven Modulen',
+  '',
+  'Antworte auf Deutsch. Beschreibe kurz (1-2 Saetze) was du gebaut hast, dann die HTML.'
 ].join('\n');
 
 // ─── TEMPLATE ENGINE ───────────────────────────────────────────
@@ -716,10 +725,21 @@ function applyThemeToIframe(themeId) {
 // ─── CHAT ───────────────────────────────────────────────────────
 
 function renderWelcome() {
+  var connected = !!state.zyrkelPort;
   var html = '<div class="chat-welcome">';
   html += '<div class="chat-welcome-icon">&#x2B21;</div>';
   html += '<h2>Was moechtest du bauen?</h2>';
-  html += '<p>Beschreibe dein Projekt und ich baue es fuer dich.</p>';
+
+  if (connected) {
+    html += '<p>Dein Zyrkel ist verbunden. Beschreibe frei was du willst — <b>Spiele, Dashboards, Portale, Rechner, Visualisierungen, alles.</b> Der KI-Assistent baut es fuer dich.</p>';
+  } else {
+    html += '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#f59e0b;">';
+    html += '<b>Kein Zyrkel gefunden.</b> Ohne lokalen Zyrkel stehen nur vorgefertigte Vorlagen zur Verfuegung. ';
+    html += 'Fuer volle KI-Unterstuetzung (beliebige Projekte, Spiele, freies Design) starte deinen Zyrkel-Prozess.';
+    html += '</div>';
+    html += '<p>Waehle eine Vorlage:</p>';
+  }
+
   html += '<div class="chat-examples">';
   EXAMPLES.forEach(function(ex) {
     html += '<button class="chat-example-chip">' + ex + '</button>';
@@ -806,9 +826,8 @@ function sendToZyrkel(text) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      messages: messages,
-      system: LLM_SYSTEM_PROMPT,
-      stream: false
+      message: text,
+      system: LLM_SYSTEM_PROMPT
     })
   })
   .then(function(r) { return r.json(); })
@@ -851,8 +870,8 @@ function handleOffline(text) {
     });
 
     if (!bestMatch || bestScore < 3) {
-      // Default to dashboard
-      bestMatch = 'dashboard';
+      addMessage('assistant', 'Ohne Zyrkel-Verbindung kann ich nur vorgefertigte Vorlagen laden. Fuer freie Projekte (Spiele, individuelle Apps) brauche ich den KI-Assistenten. Starte deinen Zyrkel oder waehle eine der Vorlagen oben.');
+      return;
     }
 
     var tpl = TEMPLATES[bestMatch];
@@ -1279,8 +1298,12 @@ function init() {
 
   detectZyrkel().then(function(port) {
     updateZyrkelStatus(port);
+    // Re-render welcome with connection status
+    if (chatMessages.querySelector('.chat-welcome')) {
+      renderWelcome();
+    }
     if (port) {
-      addSystemMessage('Zyrkel verbunden auf Port ' + port);
+      addSystemMessage('Zyrkel verbunden auf Port ' + port + ' — volle KI-Unterstuetzung aktiv. Du kannst alles bauen.');
     }
   });
 
