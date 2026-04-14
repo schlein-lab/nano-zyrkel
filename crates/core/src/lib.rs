@@ -38,6 +38,7 @@ pub mod literature;
 pub mod maildesk;
 pub mod notify;
 pub mod output;
+pub mod pipeline;
 pub mod plugin;
 pub mod runtime;
 pub mod variant_classifier;

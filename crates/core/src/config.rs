@@ -71,6 +71,10 @@ pub struct HatConfig {
     /// ClinVar-specific config (only used when type = clinvar)
     #[serde(default)]
     pub clinvar: Option<ClinVarConfig>,
+
+    /// Pipeline-specific config (only used when type = pipeline)
+    #[serde(default)]
+    pub pipeline: Option<PipelineConfig>,
 }
 
 /// Configuration for the Variant Classifier nano type.
@@ -184,6 +188,83 @@ fn default_cv_max_variants() -> u32 { 100 }
 fn default_cv_delay() -> u64 { 350 }
 fn default_true() -> bool { true }
 
+/// Configuration for the Pipeline nano type.
+///
+/// A pipeline iterates through a manifest of work items (tiles, genes, pages,
+/// etc.), polls an external progress API, and auto-advances to the next item
+/// when a threshold is reached. The active item is written to a queue file
+/// in staging/ so downstream consumers (browsers, workers, other nano-zyrkels)
+/// can read it.
+///
+/// ## Generic concepts
+///
+/// - **Manifest**: A JSON URL that lists all items to process (fetched once, cached).
+/// - **Progress**: A JSON URL that reports how much work is done (polled each run).
+/// - **Threshold**: Fraction (0.0–1.0) of total work done before advancing.
+/// - **Queue file**: `staging/{id}/active.json` — the currently active item.
+///
+/// ## Example config (CrowdGenome)
+///
+/// ```json
+/// {
+///   "type": "pipeline",
+///   "pipeline": {
+///     "manifest_url": "https://cdn.example.com/ref/manifest.json",
+///     "manifest_items_path": "$.chromosomes.*.tile_list[*]",
+///     "progress_url": "https://api.example.com/stats",
+///     "progress_done_path": "$.unique_chunks",
+///     "progress_total": 256271,
+///     "advance_threshold": 0.8,
+///     "item_key_template": "{chr}:{start}-{end}",
+///     "item_url_template": "https://cdn.example.com/{file}",
+///     "milestones": [10, 25, 50, 75, 90, 100]
+///   }
+/// }
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PipelineConfig {
+    /// URL to the manifest JSON (list of all work items).
+    pub manifest_url: String,
+
+    /// JSONPath into the manifest to extract the flat list of items.
+    /// Each item is a JSON object with fields used by the templates below.
+    #[serde(default = "default_manifest_items_path")]
+    pub manifest_items_path: String,
+
+    /// URL to poll for progress (e.g. an API stats endpoint).
+    pub progress_url: String,
+
+    /// JSONPath to extract the "done" count from the progress response.
+    #[serde(default = "default_progress_done_path")]
+    pub progress_done_path: String,
+
+    /// Total number of work units. If 0, extracted from manifest at runtime.
+    #[serde(default)]
+    pub progress_total: u64,
+
+    /// Advance to next item when done/total >= this value (0.0–1.0).
+    #[serde(default = "default_threshold")]
+    pub advance_threshold: f64,
+
+    /// Template for the item key, using `{field}` placeholders resolved
+    /// against each manifest item. E.g. `"{chr}:{start}-{end}"`.
+    #[serde(default)]
+    pub item_key_template: Option<String>,
+
+    /// Template for the item URL. E.g. `"https://cdn.example.com/{file}"`.
+    #[serde(default)]
+    pub item_url_template: Option<String>,
+
+    /// Percentage milestones at which to send a notification.
+    #[serde(default = "default_milestones")]
+    pub milestones: Vec<u32>,
+}
+
+fn default_manifest_items_path() -> String { "$[*]".to_string() }
+fn default_progress_done_path() -> String { "$.done".to_string() }
+fn default_threshold() -> f64 { 0.8 }
+fn default_milestones() -> Vec<u32> { vec![10, 25, 50, 75, 90, 100] }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HatType {
@@ -205,6 +286,9 @@ pub enum HatType {
     VariantClassifier,
     /// ClinVar VUS reclassification + submission tracker
     ClinVar,
+    /// Distributed work pipeline: iterate through a manifest of items,
+    /// track external progress via API, auto-advance when threshold met.
+    Pipeline,
 }
 
 impl std::fmt::Display for HatType {
@@ -219,6 +303,7 @@ impl std::fmt::Display for HatType {
             Self::LiteratureAlert => write!(f, "literature_alert"),
             Self::VariantClassifier => write!(f, "variant_classifier"),
             Self::ClinVar => write!(f, "clinvar"),
+            Self::Pipeline => write!(f, "pipeline"),
         }
     }
 }

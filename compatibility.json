@@ -15,6 +15,13 @@
       "released": "2026-04-10",
       "breaking": [],
       "notes": "Layered SDK landed. New notify channels (Discord, Slack), new GitHub actions (GithubComment, GithubRelease), new fetchers (RSS/Atom, Sitemap, iCal — all quick-xml backed), new conditions (Threshold, Stale, JsonSchema, Diff). New core::introspect module + nano-zyrkel introspect CLI subcommand publish the full SDK catalog as JSON for the browser-based builder. CLI surface and library API stay backward compatible."
+    },
+    "v0.3.0": {
+      "config_schema": "v1",
+      "library_api": "v1",
+      "released": "2026-04-14",
+      "breaking": [],
+      "notes": "New HatType::Pipeline — generic distributed work queue orchestrator. Iterates through a manifest of items, polls an external progress API, auto-advances when threshold reached, notifies on milestones. Writes active.json for downstream consumers. First consumer: CrowdGenome (pangenome alignment across 686 GRCh38 tiles). Backward compatible: no changes to existing types or APIs."
     }
   },
   "wasm": {

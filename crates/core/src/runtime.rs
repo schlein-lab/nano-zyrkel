@@ -20,7 +20,7 @@ use chrono::Timelike;
 
 use crate::config::{HatConfig, HatType};
 use crate::plugin::{Plugin, PluginContext};
-use crate::{action, clinvar, condition, fetch, i18n, literature, maildesk, notify, output, variant_classifier};
+use crate::{action, clinvar, condition, fetch, i18n, literature, maildesk, notify, output, pipeline, variant_classifier};
 
 /// Options that control how the runtime executes a single run.
 ///
@@ -122,6 +122,9 @@ impl Runtime {
             }
             HatType::ClinVar => {
                 clinvar::run_clinvar(&self.config, opts.dry_run).await
+            }
+            HatType::Pipeline => {
+                pipeline::run(&self.config, opts.dry_run).await
             }
             // ── Standard nano flow: fetch → condition → notify → act ──
             _ => self.run_standard(&mut ctx, &lang).await,

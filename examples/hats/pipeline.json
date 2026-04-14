@@ -1,0 +1,26 @@
+{
+  "id": "example-pipeline",
+  "description": "Distributed work queue — iterate items, track progress, auto-advance",
+  "type": "pipeline",
+  "source": {
+    "url": "https://api.example.com/stats",
+    "method": "GET"
+  },
+  "notify": {
+    "telegram": true,
+    "message": "Pipeline {value}% — {summary}"
+  },
+  "output_dir": "staging",
+  "lang": "en",
+  "pipeline": {
+    "manifest_url": "https://cdn.example.com/manifest.json",
+    "manifest_items_path": "$.items[*]",
+    "progress_url": "https://api.example.com/stats",
+    "progress_done_path": "$.done_count",
+    "progress_total": 10000,
+    "advance_threshold": 0.8,
+    "item_key_template": "{name}:{start}-{end}",
+    "item_url_template": "https://cdn.example.com/data/{file}",
+    "milestones": [10, 25, 50, 75, 90, 100]
+  }
+}

@@ -131,6 +131,13 @@ fn nano_types() -> Vec<EntrySchema> {
             fields: vec![],
             env: vec![],
         },
+        EntrySchema {
+            id: "pipeline",
+            label: "Pipeline",
+            help: "Distributed work queue: iterate a manifest, poll progress, auto-advance on threshold, notify on milestones.",
+            fields: vec![],
+            env: vec![],
+        },
     ]
 }
 
