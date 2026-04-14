@@ -1,16 +1,18 @@
-//! Reply drafter — uses Codex CLI to compose professional email replies.
+//! Reply drafter — uses LlmClient to compose professional email replies.
 //! Drafts are plain text (HTML rendering happens in sender module).
 
 use anyhow::Result;
 use super::imap_client::EmailHeaders;
 use super::analyzer::AnalysisPlan;
 use crate::config::MaildeskConfig;
+use crate::llm::LlmClient;
 
-/// Draft a professional reply using Codex CLI.
+/// Draft a professional reply using the best available LLM backend.
 pub async fn draft_reply(
     headers: &EmailHeaders,
     plan: &AnalysisPlan,
     config: &MaildeskConfig,
+    llm: &LlmClient,
 ) -> Result<String> {
     let prompt = format!(
         "Du schreibst eine Antwort-Email im Namen von {}, {}.\n\n\
@@ -32,30 +34,16 @@ pub async fn draft_reply(
         plan.summary, plan.reply_brief,
     );
 
-    let output_file = format!("/tmp/nano-draft-{}.txt", std::process::id());
-
-    let status = tokio::process::Command::new("codex")
-        .args(["exec", "--skip-git-repo-check", "--ephemeral", "-o", &output_file])
-        .arg(&prompt)
-        .output()
-        .await;
-
-    let draft = match status {
-        Ok(out) if out.status.success() => {
-            tokio::fs::read_to_string(&output_file).await.unwrap_or_default()
+    match llm.prompt(&prompt, 800).await {
+        Ok(draft) => Ok(draft.trim().to_string()),
+        Err(e) => {
+            tracing::warn!("[drafter] LLM failed ({}), using polite placeholder", e);
+            Ok("Sehr geehrte Damen und Herren,\n\n\
+                vielen Dank fuer Ihre Nachricht.\n\
+                Ich melde mich zeitnah bei Ihnen.\n\n\
+                Mit freundlichen Gruessen".to_string())
         }
-        _ => {
-            format!(
-                "Sehr geehrte Damen und Herren,\n\n\
-                 vielen Dank fuer Ihre Nachricht.\n\
-                 Ich melde mich zeitnah bei Ihnen.\n\n\
-                 Mit freundlichen Gruessen"
-            )
-        }
-    };
-
-    let _ = tokio::fs::remove_file(&output_file).await;
-    Ok(draft.trim().to_string())
+    }
 }
 
 /// Re-draft with additional instruction.
@@ -64,9 +52,9 @@ pub async fn redraft(
     plan: &AnalysisPlan,
     config: &MaildeskConfig,
     instruction: &str,
+    llm: &LlmClient,
 ) -> Result<String> {
-    // Modify plan with instruction hint
     let mut modified_plan = plan.clone();
     modified_plan.reply_brief = format!("{} (Hinweis: {})", plan.reply_brief, instruction);
-    draft_reply(headers, &modified_plan, config).await
+    draft_reply(headers, &modified_plan, config, llm).await
 }

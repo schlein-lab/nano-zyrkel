@@ -2,12 +2,13 @@
 //!
 //! Architecture:
 //!   1. imap_client: fetch unread emails from IMAP
-//!   2. analyzer: extract text + Codex analysis → structured plan
-//!   3. drafter: Codex drafts professional reply
+//!   2. analyzer: LLM analysis → structured plan (via LlmClient)
+//!   3. drafter: LLM drafts professional reply (via LlmClient)
 //!   4. telegram: send draft for approval, process commands
 //!   5. sender: render HTML + send via SMTP on approval
 //!
-//! Each module is independent and testable.
+//! LLM access is provided by the generic `LlmClient` which auto-selects
+//! the best backend: Headless (if connected) → Anthropic API → Codex CLI.
 
 pub mod imap_client;
 pub mod analyzer;
@@ -17,6 +18,7 @@ pub mod sender;
 
 use anyhow::{Context, Result};
 use crate::config::{HatConfig, MaildeskConfig};
+use crate::llm::LlmClient;
 
 /// Run one complete maildesk cycle.
 pub async fn run_maildesk(config: &HatConfig, dry_run: bool) -> Result<()> {
@@ -31,6 +33,11 @@ pub async fn run_maildesk(config: &HatConfig, dry_run: bool) -> Result<()> {
     let staging_dir = format!("{}/{}", config.output_dir, config.id);
     std::fs::create_dir_all(format!("{}/inbox", staging_dir))?;
     std::fs::create_dir_all(format!("{}/cases", staging_dir))?;
+
+    // Initialize LLM client (Headless → Anthropic → Codex fallback)
+    let headless = crate::headless::try_connect(config).await;
+    let llm = LlmClient::auto(headless.as_ref());
+    tracing::info!("[maildesk] LLM backend: {:?}", llm.backend());
 
     // Load or initialize state
     let state_path = format!("{}/state.json", staging_dir);
@@ -73,13 +80,13 @@ pub async fn run_maildesk(config: &HatConfig, dry_run: bool) -> Result<()> {
         // Extract body text
         let body = imap_client::extract_body_text(&eml_path, md.max_codex_chars)?;
 
-        // Analyze with Codex
+        // Analyze with LLM
         tracing::info!("[maildesk] Analyzing...");
-        let plan = analyzer::analyze(&headers, &body, &smtp_user).await?;
+        let plan = analyzer::analyze(&headers, &body, &smtp_user, &llm).await?;
 
-        // Draft reply
+        // Draft reply with LLM
         tracing::info!("[maildesk] Drafting reply...");
-        let draft = drafter::draft_reply(&headers, &plan, md).await?;
+        let draft = drafter::draft_reply(&headers, &plan, md, &llm).await?;
 
         // Create case
         let case_id = format!("mail-{}-{}", chrono::Utc::now().format("%Y%m%d"), uid);
