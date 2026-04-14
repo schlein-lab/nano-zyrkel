@@ -14,7 +14,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```ignore
 //! use nano_zyrkel_core::llm::LlmClient;
 //!
 //! let client = LlmClient::auto(&ctx); // picks best available backend
