@@ -127,10 +127,15 @@ pub async fn run(config: &HatConfig, dry_run: bool) -> Result<()> {
     let current = &items[state.active_index];
 
     // 5. Write active.json for consumers
+    // Try "chr" field first, fall back to "_parent" (injected by wildcard extraction)
+    let chr_val = current.fields.get("chr")
+        .or_else(|| current.fields.get("_parent"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
     let active_json = serde_json::json!({
         "tile": {
-            "chr": current.fields.get("chr").and_then(|v| v.as_str()).unwrap_or(""),
-            "index": current.index,
+            "chr": chr_val,
+            "index": current.fields.get("index").and_then(|v| v.as_u64()).unwrap_or(current.index as u64),
             "key": current.key,
             "url": current.url,
         },
@@ -245,39 +250,57 @@ fn extract_items(manifest: &serde_json::Value, path: &str) -> Vec<serde_json::Va
     // Support common patterns:
     // "$[*]" → root is an array
     // "$.chromosomes.*.tile_list[*]" → nested objects → arrays
+    //
+    // When a "*" wildcard matches an object, the parent key (e.g. "chr1")
+    // is injected as a "_parent" field into every downstream item.
+    // This lets item_key_template use {_parent} to build keys like
+    // "chr1:0-5000000" from nested manifests.
     if path == "$[*]" {
         return manifest.as_array().cloned().unwrap_or_default();
     }
 
-    // Parse "$.a.*.b[*]" pattern: walk through nested objects
+    // Parse "$.a.*.b[*]" pattern: walk through nested objects.
+    // Each entry carries an optional parent key from the last wildcard.
     let parts: Vec<&str> = path.trim_start_matches("$.").split('.').collect();
-    let mut current = vec![manifest.clone()];
+    let mut current: Vec<(Option<String>, serde_json::Value)> = vec![(None, manifest.clone())];
 
     for part in parts {
-        let mut next = Vec::new();
-        for val in &current {
+        let mut next: Vec<(Option<String>, serde_json::Value)> = Vec::new();
+        for (parent, val) in &current {
             if part == "*" {
-                // Iterate all values of an object
+                // Iterate all entries of an object, capturing the KEY
                 if let Some(obj) = val.as_object() {
-                    next.extend(obj.values().cloned());
+                    for (key, child) in obj {
+                        next.push((Some(key.clone()), child.clone()));
+                    }
                 }
             } else if part.ends_with("[*]") {
-                // Access field then iterate array
+                // Access field then iterate array, preserving parent
                 let field = part.trim_end_matches("[*]");
                 if let Some(arr) = val.get(field).and_then(|v| v.as_array()) {
-                    next.extend(arr.iter().cloned());
+                    for item in arr {
+                        next.push((parent.clone(), item.clone()));
+                    }
                 }
             } else {
-                // Access field
+                // Access field, preserving parent
                 if let Some(v) = val.get(part) {
-                    next.push(v.clone());
+                    next.push((parent.clone(), v.clone()));
                 }
             }
         }
         current = next;
     }
 
-    current
+    // Inject _parent into each item that has one
+    current.into_iter().map(|(parent, mut val)| {
+        if let Some(parent_key) = parent {
+            if let Some(obj) = val.as_object_mut() {
+                obj.insert("_parent".to_string(), serde_json::Value::String(parent_key));
+            }
+        }
+        val
+    }).collect()
 }
 
 fn resolve_template(template: &str, item: &serde_json::Value, index: usize) -> String {
