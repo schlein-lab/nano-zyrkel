@@ -70,15 +70,16 @@ process incoming email, render a dashboard. It ships:
 
 - A **binary core** (`nano-zyrkel-core`) that handles every server-side
   concern: config parsing, fetchers, conditions, notifications,
-  actions, runtime dispatch.
+  actions, runtime dispatch, and the **Headless bridge** for
+  connecting to a running Zyrkel instance.
 - A **WASM core** (`nano-zyrkel-wasm-core`) with browser-side
-  primitives: data loading, filtering, charts, UI components, the
-  whole rendering kit.
+  primitives: data loading, filtering, charts, UI components,
+  **ToolRegistry** for executing WASM CLI tools (minimap2, samtools,
+  etc. via biowasm/Aioli), and the whole rendering kit.
 - A **template library** of forkable scaffolds, themes and chart
   examples — every entry has machine-readable `template.json`
-  metadata so the upcoming browser-based **nano-zyrkel builder**
-  can render a form for it and spawn a fresh user repo with one
-  click.
+  metadata so the browser-based **nano-zyrkel builder** can render
+  a form for it and spawn a fresh user repo with one click.
 
 Your nano-zyrkel pulls these from this repository, pins a version,
 and ships. The SDK promises stable, semver-versioned APIs on every
@@ -123,9 +124,12 @@ There are **two cores**, both released from this repo independently:
 
 1. **Binary core** (`bin-vX.Y.Z`) — pre-built executables that run on a
    GitHub Actions cron, fetch data, evaluate conditions, send notifications.
+   Includes the **Pipeline** type for distributed work orchestration and
+   the **Headless bridge** for connecting to a running Zyrkel.
 2. **WASM core** (`wasm-vX.Y.Z`) — a Rust → WebAssembly library with generic
    browser-side primitives: data loading, filtering, aggregation, statistics,
-   caching, and a chart kit.
+   caching, a chart kit, and the **ToolRegistry** for executing WASM CLI tools
+   (minimap2, samtools, bedtools, etc.) via biowasm/Aioli.
 
 Your nano-zyrkel repo picks **one or both** and pins the version.
 
@@ -137,7 +141,9 @@ Your nano-zyrkel repo picks **one or both** and pins the version.
 | ------------------------------------------------------------ | -------- | --------------------------------- |
 | Watch a website / API on a schedule and send a Telegram ping | binary   | `scaffold-data-pipeline`          |
 | Run a literature alert from your inbox                       | binary   | `scaffold-data-pipeline`          |
+| Orchestrate distributed work (manifests, progress, tiles)    | binary   | `scaffold-data-pipeline` + `pipeline` type |
 | Track a dataset and serve an interactive dashboard           | both     | `scaffold-interactive-app`        |
+| Run WASM CLI tools in the browser (minimap2, samtools, etc.) | WASM     | `scaffold-interactive-app` + `ToolRegistry` |
 | Build a portal / showcase / single-page WASM experience      | WASM     | `scaffold-showcase`               |
 | Embed a chart inside an existing website                     | WASM     | copy from `templates/examples/`   |
 
@@ -321,8 +327,8 @@ Your nano-zyrkel repo pins both versions in `.nano-zyrkel-versions.json`:
 
 ```json
 {
-  "binary": "v0.1.0",
-  "wasm": "v0.1.0",
+  "binary": "v0.4.0",
+  "wasm": "v0.3.0",
   "pinning": { "binary": "minor", "wasm": "minor" }
 }
 ```
@@ -357,11 +363,17 @@ posted as an issue with a migration guide instead.
 ```
 
 1. **Cron triggers** the workflow on schedule.
-2. **Fetch** — pull content from any URL (HTTP, API, RSS, JSONPath, IMAP, headless browser).
-3. **Evaluate** — check a condition (text match, regex, CSS selector, change detection, LLM).
-4. **Output** — write results to `staging/` (versioned via git commits).
-5. **Notify** — send Telegram or email alerts on match.
-6. **Action** — optionally fire webhooks, create GitHub issues, trigger other agents.
+2. **Heartbeat** — if `ZYRKEL_HEADLESS_URL` is set, announce to Headless and receive empowerment capabilities (LLM, DB queries, tool execution).
+3. **Fetch** — pull content from any URL (HTTP, API, RSS, JSONPath, IMAP, headless browser).
+4. **Evaluate** — check a condition (text match, regex, CSS selector, change detection, LLM).
+5. **Output** — write results to `staging/` (versioned via git commits).
+6. **Push event** — if connected to Headless, push finding/milestone in real-time (no Git polling needed).
+7. **Notify** — send Telegram or email alerts on match.
+8. **Action** — optionally fire webhooks, create GitHub issues, trigger other agents.
+
+For **Pipeline** nanos (type `pipeline`), steps 3–4 are replaced by:
+load manifest → poll external progress API → advance work item when
+threshold reached → write `staging/{id}/active.json` for downstream consumers.
 
 ### Repository layout for a typical user repo
 
@@ -417,21 +429,129 @@ impl Plugin for DomainFilter {
 
 ---
 
+## Headless bridge — connected = empowered
+
+A nano-zyrkel is fully autonomous by default: it runs on GitHub Actions,
+commits to staging/, and never needs a server. But when a **Zyrkel Headless**
+instance is running, nanos can connect to it and gain superpowers:
+
+```json
+{ "headless_url": "http://localhost:37848" }
+```
+
+Or set `ZYRKEL_HEADLESS_URL` in your workflow environment.
+
+When connected, the nano:
+- **Sends a heartbeat** at the start of each run (auto-adopted by Headless).
+- **Pushes events in real-time** instead of waiting for Git-polling.
+- **Uses Headless LLM** — send prompts to Claude through Headless's API key.
+- **Queries Headless DB** — read findings from other nanos, aggregate cross-agent data.
+
+```rust
+// Inside a plugin, when connected to Headless:
+if let Some(conn) = &ctx.headless {
+    let summary = headless::llm(conn, "Summarize these findings: ...", 300).await?;
+    let other_nanos = headless::query(conn, "SELECT * FROM nano_findings WHERE matched=1 LIMIT 5").await?;
+}
+```
+
+**Disconnected = autonomous. Connected = empowered. Same binary, same config.**
+
+---
+
+## Pipeline type — distributed work orchestration
+
+The `pipeline` hat type coordinates distributed work across a manifest of
+items. The binary iterates through items, polls an external progress API,
+and auto-advances when a threshold is reached.
+
+```json
+{
+  "type": "pipeline",
+  "pipeline": {
+    "manifest_url": "https://cdn.example.com/manifest.json",
+    "manifest_items_path": "$.items[*]",
+    "progress_url": "https://api.example.com/stats",
+    "progress_done_path": "$.done_count",
+    "progress_total": 10000,
+    "advance_threshold": 0.8,
+    "item_key_template": "{name}:{start}-{end}",
+    "item_url_template": "https://cdn.example.com/{file}",
+    "milestones": [10, 25, 50, 75, 90, 100]
+  }
+}
+```
+
+The binary writes `staging/{id}/active.json` which downstream consumers
+(browsers, workers, other nanos) read to know what to work on next.
+Milestones trigger notifications. Nested manifests are supported via
+`*` wildcard paths (parent keys are auto-injected as `_parent`).
+
+First consumer: [CrowdGenome](https://github.com/schlein-lab/nano-zyrkel-crowdgenome)
+— 686 GRCh38 tiles, 256k pangenome chunks, minimap2 alignment in the browser.
+
+---
+
+## ToolRegistry — WASM CLI tools in the browser
+
+The WASM core includes a `ToolRegistry` (behind the `tools` feature gate)
+that registers, lazy-loads, and executes WASM CLI tools via biowasm/Aioli:
+
+```js
+import init, { ToolRegistry } from './wasm/nano_zyrkel_wasm_core.js';
+await init();
+
+const tools = new ToolRegistry();
+tools.register('minimap2', '2.22', 'biowasm');
+tools.register('samtools', '1.17', 'biowasm');
+
+// Execute a tool with file mounting
+const result = await tools.exec('minimap2', ['-a', 'ref.fa', 'query.fa'], {
+  'ref.fa': refText,
+  'query.fa': queryText,
+});
+console.log(result.stdout);     // SAM output
+console.log(result.elapsedMs);  // wall-clock time
+
+// Pipeline: minimap2 | samtools view -bS -
+const bam = await tools.pipe([
+  { tool: 'minimap2', args: ['-a', 'ref.fa', 'query.fa'] },
+  { tool: 'samtools', args: ['view', '-bS', '-'] },
+], { 'ref.fa': refText, 'query.fa': queryText });
+```
+
+Any biowasm tool works: minimap2, samtools, bcftools, bedtools, seqtk,
+fastp, bowtie2, jq, grep, sed, and [40+ more](https://biowasm.com).
+
+---
+
 ## Live examples
 
-| Repo                                         | Pattern                  | What it does                              |
+| Repo                                         | Type                     | What it does                              |
 | -------------------------------------------- | ------------------------ | ----------------------------------------- |
-| [`nano-zyrkel-vusTracker`][vt]               | binary + own WASM        | ClinVar VUS reclassification tracker      |
-| [`nano-zyrkel-helix`][hx]                    | WASM (+ optional binary) | Interactive human genetics teaching suite |
+| [`nano-zyrkel-crowdgenome`][cg]              | `pipeline` + WASM tools  | Distributed pangenome alignment via browser WASM (minimap2 via ToolRegistry) |
+| [`nano-zyrkel-vusTracker`][vt]               | `tracker` + own WASM     | ClinVar VUS reclassification tracker      |
+| [`nano-zyrkel-helix`][hx]                    | WASM (+ data pipeline)   | Interactive human genetics teaching suite |
 | [`nano-zyrkel-showcase`][sc]                 | WASM only                | Cinematic portal for the ecosystem        |
+| [`nano-zyrkel-literatureAlert`][la]          | `literature_alert`       | PubMed/bioRxiv/medRxiv paper aggregation  |
+| [`nano-zyrkel-rain-alert`][ra]               | `watcher`                | Weather alerts (LLM-powered)              |
+| [`nano-zyrkel-bahn-tostedt-hh`][bh]          | `tracker`                | Train delay tracker (headless Chrome)     |
+| [`nano-zyrkel-awmf-leitlinien`][aw]          | `watcher`                | German medical guidelines tracker         |
+| [`nano-zyrkel-segdup-papers`][sp]             | `crawler`                | Segmental duplication preprints           |
 
 Each repo is a real, running deployment of the patterns described above —
-read their `Cargo.toml`, `.nano-zyrkel-versions.json` and
-`.github/workflows/` to see how the pieces fit together.
+read their `hats/config.json` and `.github/workflows/` to see how the
+pieces fit together.
 
+[cg]: https://github.com/schlein-lab/nano-zyrkel-crowdgenome
 [vt]: https://github.com/schlein-lab/nano-zyrkel-vusTracker
 [hx]: https://github.com/schlein-lab/nano-zyrkel-helix
 [sc]: https://github.com/schlein-lab/nano-zyrkel-showcase
+[la]: https://github.com/schlein-lab/nano-zyrkel-literatureAlert
+[ra]: https://github.com/christian-schlein/nano-zyrkel-rain-alert
+[bh]: https://github.com/christian-schlein/nano-zyrkel-bahn-tostedt-hh
+[aw]: https://github.com/christian-schlein/nano-zyrkel-awmf-leitlinien
+[sp]: https://github.com/christian-schlein/nano-zyrkel-segdup-papers
 
 ---
 
