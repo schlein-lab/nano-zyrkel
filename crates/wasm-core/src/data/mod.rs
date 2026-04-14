@@ -21,3 +21,6 @@ pub mod search;
 pub mod stats;
 pub mod url_state;
 pub mod websocket;
+
+#[cfg(feature = "tools")]
+pub mod tool_registry;

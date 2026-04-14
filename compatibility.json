@@ -44,6 +44,21 @@
       ],
       "breaking": [],
       "notes": "Layered SDK landed. New data primitives (Csv, DateTime, UrlState, Router, WebSocketClient). New viz-ui feature gate with Toast, Modal, Tabs, Accordion, Icons (~30 inline SVG), TextInput/Select/Range form bindings, Sortable, Markdown (pulldown-cmark), Easing + Tween. New introspect module exposes the WASM SDK catalog via the wasmSdkSchema() JS function for the browser-based builder."
+    },
+    "v0.3.0": {
+      "wasm_api": "v1",
+      "config_schema": "v1",
+      "released": "2026-04-14",
+      "feature_profiles": [
+        "data",
+        "tools",
+        "viz-basic",
+        "viz-advanced",
+        "viz-ui",
+        "all"
+      ],
+      "breaking": [],
+      "notes": "New 'tools' feature gate: ToolRegistry for registering, lazy-loading, executing and piping WASM CLI tools (minimap2, samtools, bedtools etc.) via biowasm/Aioli. Supports file mounting, stdout/stderr capture, multi-step pipelines, and tool health status. First consumer: nano-zyrkel-crowdgenome."
     }
   }
 }

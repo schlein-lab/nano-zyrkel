@@ -31,6 +31,11 @@ data = []
 # ConfigReader, I18n
 config = []
 
+# ── Tool execution layer ──
+# ToolRegistry — register, lazy-load, exec and pipe WASM CLI tools
+# (e.g. minimap2, samtools, bedtools via biowasm/Aioli)
+tools = ["data"]
+
 # ── Visualization: foundation + basic charts ──
 # CanvasSetup, Scale, Axis, ColorPalette, Format,
 # LineChart, BarChart, Donut, Tooltip
@@ -50,7 +55,7 @@ viz-spatial = ["viz-basic"]
 viz-ui = ["viz-basic", "dep:pulldown-cmark"]
 
 # ── Convenience meta-feature ──
-all = ["viz-spatial", "viz-advanced", "viz-ui", "config"]
+all = ["viz-spatial", "viz-advanced", "viz-ui", "config", "tools"]
 
 [dependencies]
 wasm-bindgen = "0.2"

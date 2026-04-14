@@ -62,6 +62,8 @@ fn features_enabled() -> Vec<&'static str> {
     out.push("viz-spatial");
     #[cfg(feature = "viz-ui")]
     out.push("viz-ui");
+    #[cfg(feature = "tools")]
+    out.push("tools");
     out
 }
 
@@ -144,6 +146,12 @@ fn catalog() -> Vec<WasmEntry> {
         WasmEntry { id: "Markdown", label: "Markdown", help: "pulldown-cmark backed Markdown → HTML renderer.", layer: "viz-ui" },
         WasmEntry { id: "Easing", label: "Easing", help: "Standard easing functions for tweens.", layer: "viz-ui" },
         WasmEntry { id: "Tween", label: "Tween", help: "Tiny request-animation-frame tween helper.", layer: "viz-ui" },
+    ]);
+
+    // ── tools ──
+    #[cfg(feature = "tools")]
+    entries.extend([
+        WasmEntry { id: "ToolRegistry", label: "Tool registry", help: "Register, lazy-load, exec and pipe WASM CLI tools (e.g. minimap2, samtools via biowasm/Aioli).", layer: "tools" },
     ]);
 
     let _ = json!(()); // keep `serde_json::json` import alive in trimmed builds
