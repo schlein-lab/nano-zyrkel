@@ -75,6 +75,14 @@ pub struct HatConfig {
     /// Pipeline-specific config (only used when type = pipeline)
     #[serde(default)]
     pub pipeline: Option<PipelineConfig>,
+
+    /// Optional Zyrkel Headless URL for empowerment.
+    /// When set, the nano sends a heartbeat at startup and pushes events
+    /// directly instead of relying on Git-polling. A connected nano can
+    /// use Headless LLM, tool execution, and DB query capabilities.
+    /// Can also be set via ZYRKEL_HEADLESS_URL env var.
+    #[serde(default)]
+    pub headless_url: Option<String>,
 }
 
 /// Configuration for the Variant Classifier nano type.

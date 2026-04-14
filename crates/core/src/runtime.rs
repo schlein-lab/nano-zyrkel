@@ -20,7 +20,7 @@ use chrono::Timelike;
 
 use crate::config::{HatConfig, HatType};
 use crate::plugin::{Plugin, PluginContext};
-use crate::{action, clinvar, condition, fetch, i18n, literature, maildesk, notify, output, pipeline, variant_classifier};
+use crate::{action, clinvar, condition, fetch, headless, i18n, literature, maildesk, notify, output, pipeline, variant_classifier};
 
 /// Options that control how the runtime executes a single run.
 ///
@@ -74,6 +74,7 @@ impl Runtime {
             scratch: Default::default(),
             lang: lang.clone(),
             dry_run: opts.dry_run,
+            headless: None,
         };
 
         // ── Plugin init phase ──
@@ -88,6 +89,11 @@ impl Runtime {
             "{}",
             i18n::msg(&lang, "hat_starting", &[&self.config.id])
         );
+
+        // ── Headless connection (opt-in: if headless_url or ZYRKEL_HEADLESS_URL set) ──
+        if !opts.dry_run {
+            ctx.headless = headless::try_connect(&self.config).await;
+        }
 
         // ── Backfill mode (delegated per nano type) ──
         if let Some(backfill_path) = &opts.backfill {
@@ -160,6 +166,14 @@ impl Runtime {
 
         // 3. Write output to staging/
         output::write_result(&self.config, &result, ctx.dry_run)?;
+
+        // 3b. Push event to Headless (if connected)
+        if let Some(conn) = &ctx.headless {
+            let event_type = if result.matched { "finding" } else { "check" };
+            if let Err(e) = headless::push_event(conn, &result, event_type).await {
+                tracing::debug!("Headless event push failed: {}", e);
+            }
+        }
 
         // 4. If match → plugin pre-action hooks → notify → act
         if result.matched {

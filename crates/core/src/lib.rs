@@ -32,6 +32,7 @@ pub mod clinvar;
 pub mod condition;
 pub mod config;
 pub mod fetch;
+pub mod headless;
 pub mod i18n;
 pub mod introspect;
 pub mod literature;

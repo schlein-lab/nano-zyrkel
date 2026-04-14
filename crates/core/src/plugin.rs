@@ -50,6 +50,8 @@
 use anyhow::Result;
 use serde_json::Value;
 
+use crate::headless::HeadlessConnection;
+
 /// Mutable context passed to every plugin hook.
 ///
 /// Plugins can stash state in [`PluginContext::scratch`] (a JSON object)
@@ -62,6 +64,9 @@ pub struct PluginContext {
     pub lang: String,
     /// Whether the run is in dry-run mode.
     pub dry_run: bool,
+    /// Active Headless connection (if available). Plugins can use this
+    /// to access LLM, tool execution, and DB queries on the full Zyrkel.
+    pub headless: Option<HeadlessConnection>,
 }
 
 impl PluginContext {
