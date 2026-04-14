@@ -131,6 +131,68 @@ pub async fn push_event(
     Ok(())
 }
 
+// ── Empowerment: LLM + Query ───────────────────────────────────────────
+
+/// Send a prompt to Headless LLM. Only works if connected and empowered.
+pub async fn llm(conn: &HeadlessConnection, prompt: &str, max_tokens: usize) -> Result<String> {
+    if !conn.caps.empowered || !conn.caps.capabilities.contains(&"llm".to_string()) {
+        anyhow::bail!("not empowered for LLM");
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()?;
+
+    let resp = client
+        .post(format!("{}/api/nanos/{}/llm", conn.base_url, conn.nano_id))
+        .json(&serde_json::json!({
+            "prompt": prompt,
+            "max_tokens": max_tokens,
+        }))
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        let body = resp.text().await.unwrap_or_default();
+        anyhow::bail!("LLM request failed: {}", body);
+    }
+
+    let body: serde_json::Value = resp.json().await?;
+    Ok(body["response"].as_str().unwrap_or("").to_string())
+}
+
+/// Query Headless DB. Only SELECT on nano_* tables. Returns rows as JSON array.
+pub async fn query(conn: &HeadlessConnection, sql: &str) -> Result<Vec<serde_json::Value>> {
+    if !conn.caps.empowered || !conn.caps.capabilities.contains(&"db_query".to_string()) {
+        anyhow::bail!("not empowered for DB queries");
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()?;
+
+    let resp = client
+        .post(format!(
+            "{}/api/nanos/{}/query",
+            conn.base_url, conn.nano_id
+        ))
+        .json(&serde_json::json!({ "sql": sql }))
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        let body = resp.text().await.unwrap_or_default();
+        anyhow::bail!("query failed: {}", body);
+    }
+
+    let body: serde_json::Value = resp.json().await?;
+    let rows = body["rows"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    Ok(rows)
+}
+
 /// Try to connect to Headless. Returns None if not configured or unreachable.
 /// This is called once at the start of each run.
 pub async fn try_connect(config: &HatConfig) -> Option<HeadlessConnection> {
