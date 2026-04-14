@@ -169,7 +169,11 @@ impl Runtime {
 
         // 3b. Push event to Headless (if connected)
         if let Some(conn) = &ctx.headless {
-            let event_type = if result.matched { "finding" } else { "check" };
+            let event_type = if result.matched {
+                headless::NanoEventType::Finding
+            } else {
+                headless::NanoEventType::Check
+            };
             if let Err(e) = headless::push_event(conn, &result, event_type).await {
                 tracing::debug!("Headless event push failed: {}", e);
             }

@@ -16,6 +16,25 @@ use serde::{Deserialize, Serialize};
 use crate::condition::ConditionResult;
 use crate::config::HatConfig;
 
+// ── Shared event types (must match zyrkel-domain/src/event.rs) ─────────
+
+/// Event types that nano-zyrkels can push to Headless.
+/// These map 1:1 to the `RoomEventType::Nano*` variants on the Headless side.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NanoEventType {
+    /// Condition evaluated, no match.
+    Check,
+    /// Condition matched — a finding.
+    Finding,
+    /// Pipeline milestone crossed (10%, 25%, 50%, ...).
+    Milestone,
+    /// Pipeline advanced to next item.
+    Advancement,
+    /// Runtime error during this run.
+    Error,
+}
+
 /// Capabilities granted by Headless when a nano is empowered.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct HeadlessCapabilities {
@@ -78,11 +97,11 @@ pub async fn send_heartbeat(config: &HatConfig, base_url: &str) -> Result<Headle
     Ok(caps)
 }
 
-/// Push an event (finding, milestone, error, advancement) to Headless.
+/// Push an event to Headless.
 pub async fn push_event(
     conn: &HeadlessConnection,
     result: &ConditionResult,
-    event_type: &str,
+    event_type: NanoEventType,
 ) -> Result<()> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
