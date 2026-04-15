@@ -38,6 +38,10 @@ pub enum LlmBackend {
     Headless,
     /// Direct Anthropic API call with own key.
     Anthropic { api_key: String, model: String },
+    /// Claude CLI subprocess (`claude --print`). Uses the user's existing
+    /// Claude login — no API key needed, works on any machine with Claude
+    /// Code installed.
+    ClaudeCli,
     /// Legacy: shell out to `codex exec`.
     Codex,
     /// No LLM available.
@@ -53,9 +57,9 @@ pub struct LlmClient {
 impl LlmClient {
     /// Auto-detect the best available backend.
     ///
-    /// Priority: Headless (if connected) → Anthropic (if key set) → Codex (if installed) → None.
+    /// Priority: Headless → Anthropic API → Claude CLI → Codex CLI → None.
     pub fn auto(headless: Option<&HeadlessConnection>) -> Self {
-        // 1. Headless
+        // 1. Headless (if connected and empowered)
         if let Some(conn) = headless {
             if conn.caps.empowered && conn.caps.capabilities.contains(&"llm".to_string()) {
                 return Self {
@@ -65,7 +69,7 @@ impl LlmClient {
             }
         }
 
-        // 2. Anthropic API
+        // 2. Anthropic API (if key set)
         if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
             if !key.is_empty() {
                 let model = std::env::var("ANTHROPIC_MODEL")
@@ -77,15 +81,23 @@ impl LlmClient {
             }
         }
 
-        // 3. Codex CLI
-        if which_codex() {
+        // 3. Claude CLI (if installed — uses existing login, no API key needed)
+        if which_bin("claude") {
+            return Self {
+                backend: LlmBackend::ClaudeCli,
+                headless: None,
+            };
+        }
+
+        // 4. Codex CLI (legacy)
+        if which_bin("codex") {
             return Self {
                 backend: LlmBackend::Codex,
                 headless: None,
             };
         }
 
-        // 4. Nothing available
+        // 5. Nothing available
         Self {
             backend: LlmBackend::None,
             headless: None,
@@ -118,11 +130,14 @@ impl LlmClient {
             LlmBackend::Anthropic { api_key, model } => {
                 anthropic_call(api_key, model, prompt, max_tokens).await
             }
+            LlmBackend::ClaudeCli => {
+                claude_cli_call(prompt, max_tokens).await
+            }
             LlmBackend::Codex => {
                 codex_call(prompt).await
             }
             LlmBackend::None => {
-                anyhow::bail!("no LLM backend available — set ANTHROPIC_API_KEY or connect to Headless")
+                anyhow::bail!("no LLM backend available — install Claude CLI, set ANTHROPIC_API_KEY, or connect to Headless")
             }
         }
     }
@@ -204,6 +219,41 @@ async fn anthropic_call(api_key: &str, model: &str, prompt: &str, max_tokens: us
     Ok(text)
 }
 
+// ── Claude CLI (`claude --print`) ──────────────────────────────────────
+
+async fn claude_cli_call(prompt: &str, max_tokens: usize) -> Result<String> {
+    let mut cmd = tokio::process::Command::new("claude");
+    cmd.arg("--print");
+    cmd.arg("--max-tokens").arg(max_tokens.to_string());
+
+    // Optional: system prompt for structured output
+    // cmd.arg("--system-prompt").arg("Respond concisely.");
+
+    // Pass prompt via stdin
+    cmd.stdin(std::process::Stdio::piped());
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
+
+    let mut child = cmd.spawn().context("spawning claude CLI")?;
+
+    // Write prompt to stdin
+    if let Some(mut stdin) = child.stdin.take() {
+        use tokio::io::AsyncWriteExt;
+        stdin.write_all(prompt.as_bytes()).await?;
+        drop(stdin); // close stdin so claude reads EOF
+    }
+
+    let output = child.wait_with_output().await.context("waiting for claude CLI")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("claude CLI failed (exit {}): {}", output.status, stderr);
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(stdout)
+}
+
 // ── Codex CLI (legacy) ─────────────────────────────────────────────────
 
 async fn codex_call(prompt: &str) -> Result<String> {
@@ -230,11 +280,16 @@ async fn codex_call(prompt: &str) -> Result<String> {
     Ok(result)
 }
 
-fn which_codex() -> bool {
-    std::process::Command::new("which")
-        .arg("codex")
-        .output()
-        .map(|o| o.status.success())
+/// Check if a binary is available on PATH.
+fn which_bin(name: &str) -> bool {
+    // Use `where` on Windows, `which` on Unix
+    let cmd = if cfg!(windows) { "where" } else { "which" };
+    std::process::Command::new(cmd)
+        .arg(name)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
         .unwrap_or(false)
 }
 
