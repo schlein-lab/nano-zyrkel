@@ -221,13 +221,10 @@ async fn anthropic_call(api_key: &str, model: &str, prompt: &str, max_tokens: us
 
 // ── Claude CLI (`claude --print`) ──────────────────────────────────────
 
-async fn claude_cli_call(prompt: &str, max_tokens: usize) -> Result<String> {
+async fn claude_cli_call(prompt: &str, _max_tokens: usize) -> Result<String> {
     let mut cmd = tokio::process::Command::new("claude");
     cmd.arg("--print");
-    cmd.arg("--max-tokens").arg(max_tokens.to_string());
-
-    // Optional: system prompt for structured output
-    // cmd.arg("--system-prompt").arg("Respond concisely.");
+    cmd.arg("--model").arg("haiku");  // fast + cheap for automated use
 
     // Pass prompt via stdin
     cmd.stdin(std::process::Stdio::piped());

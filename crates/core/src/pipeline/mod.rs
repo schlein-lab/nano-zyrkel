@@ -204,6 +204,14 @@ pub async fn run(config: &HatConfig, dry_run: bool) -> Result<()> {
         notify::send(&config.notify, config, &result, &config.lang).await?;
     }
 
+    // 7. LLM insight — generate a human-readable teaching summary
+    //    Only runs when LLM is available. Written to staging/{id}/insight.json.
+    //    Consumers (browser widgets, dashboards) can display this to educate
+    //    users about what the pipeline is doing and what the data means.
+    if !dry_run {
+        generate_insight(config, &state, &items, progress, total, &staging_dir).await;
+    }
+
     // Save state
     if !dry_run {
         save_state(&staging_dir, &state)?;
@@ -354,4 +362,128 @@ fn save_state(staging_dir: &str, state: &PipelineState) -> Result<()> {
     let path = format!("{}/pipeline_state.json", staging_dir);
     std::fs::write(&path, serde_json::to_string_pretty(state)?)?;
     Ok(())
+}
+
+// ── LLM Insight ────────────────────────────────────────────────────────
+
+/// LLM insight for the pipeline output.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct Insight {
+    /// Human-readable summary of what's happening and what it means.
+    summary: String,
+    /// What the current numbers mean in context.
+    context: String,
+    /// What comes next / what to watch for.
+    next_up: String,
+    /// Timestamp of generation.
+    generated_at: String,
+    /// Which LLM backend generated this.
+    backend: String,
+}
+
+/// Generate a teaching insight about the pipeline's current state.
+///
+/// Uses the generic LlmClient — works with Headless, Anthropic API,
+/// Claude CLI, or Codex. If no LLM is available, writes a static
+/// summary instead. Consumers (browser widgets) can display this to
+/// help users understand what the data means.
+///
+/// Written to `staging/{id}/insight.json`.
+async fn generate_insight(
+    config: &crate::config::HatConfig,
+    state: &PipelineState,
+    items: &[PipelineItem],
+    progress: u64,
+    total: u64,
+    staging_dir: &str,
+) {
+    let headless = crate::headless::try_connect(config).await;
+    let llm = crate::llm::LlmClient::auto(headless.as_ref());
+
+    let progress_pct = if total > 0 { (progress as f64 / total as f64) * 100.0 } else { 0.0 };
+    let current_key = items.get(state.active_index)
+        .map(|i| i.key.as_str())
+        .unwrap_or("unknown");
+
+    let insight = if llm.available() {
+        let prompt = format!(
+            "You are explaining a distributed computing pipeline to a curious user \
+             who wants to understand what's happening. Be concise (3 sentences each).\n\n\
+             Pipeline: {}\n\
+             Current item: {} (#{} of {})\n\
+             Progress on current item: {:.1}% ({} / {} units done)\n\
+             Items completed: {} / {}\n\n\
+             Respond with ONLY a JSON object:\n\
+             {{\n\
+               \"summary\": \"What is happening right now in plain language\",\n\
+               \"context\": \"What these numbers mean — why this matters\",\n\
+               \"next_up\": \"What will happen next in the pipeline\"\n\
+             }}",
+            config.description,
+            current_key,
+            state.active_index + 1,
+            items.len(),
+            progress_pct,
+            progress,
+            total,
+            state.completed.len(),
+            items.len(),
+        );
+
+        match llm.json::<serde_json::Value>(&prompt, 400).await {
+            Ok(val) => Insight {
+                summary: val["summary"].as_str().unwrap_or("").to_string(),
+                context: val["context"].as_str().unwrap_or("").to_string(),
+                next_up: val["next_up"].as_str().unwrap_or("").to_string(),
+                generated_at: chrono::Utc::now().to_rfc3339(),
+                backend: format!("{:?}", llm.backend()),
+            },
+            Err(e) => {
+                tracing::debug!("[pipeline] LLM insight failed: {}", e);
+                static_insight(config, state, items, progress, total, progress_pct, current_key)
+            }
+        }
+    } else {
+        static_insight(config, state, items, progress, total, progress_pct, current_key)
+    };
+
+    let path = format!("{}/insight.json", staging_dir);
+    if let Ok(json) = serde_json::to_string_pretty(&insight) {
+        if let Err(e) = std::fs::write(&path, json) {
+            tracing::debug!("[pipeline] failed to write insight: {}", e);
+        }
+    }
+}
+
+fn static_insight(
+    config: &crate::config::HatConfig,
+    state: &PipelineState,
+    items: &[PipelineItem],
+    progress: u64,
+    total: u64,
+    progress_pct: f64,
+    current_key: &str,
+) -> Insight {
+    let summary = format!(
+        "Processing item {} of {}: {}. {:.1}% of work units completed ({}/{}).",
+        state.active_index + 1, items.len(), current_key,
+        progress_pct, progress, total,
+    );
+    let context = format!(
+        "{} — {} items done so far. Each item is processed until {:.0}% \
+         of work units are covered, then the pipeline advances to the next.",
+        config.description, state.completed.len(), 80.0,
+    );
+    let next_up = if progress_pct >= 70.0 {
+        format!("Almost ready to advance. At {:.0}% threshold, the next item will activate automatically.", 80.0)
+    } else {
+        format!("Continuing on {}. {:.0}% remaining before advancement.", current_key, 80.0 - progress_pct)
+    };
+    Insight {
+        summary,
+        context,
+        next_up,
+        generated_at: chrono::Utc::now().to_rfc3339(),
+        backend: "static".to_string(),
+    }
 }
