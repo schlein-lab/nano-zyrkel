@@ -36,7 +36,8 @@ pub async fn run_maildesk(config: &HatConfig, dry_run: bool) -> Result<()> {
 
     // Initialize LLM client (Headless → Anthropic → Codex fallback)
     let headless = crate::headless::try_connect(config).await;
-    let llm = LlmClient::auto(headless.as_ref());
+    let llm = LlmClient::auto(headless.as_ref())
+        .with_nano_id(&config.id);
     tracing::info!("[maildesk] LLM backend: {:?}", llm.backend());
 
     // Load or initialize state

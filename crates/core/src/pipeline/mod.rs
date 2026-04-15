@@ -398,7 +398,8 @@ async fn generate_insight(
     staging_dir: &str,
 ) {
     let headless = crate::headless::try_connect(config).await;
-    let llm = crate::llm::LlmClient::auto(headless.as_ref());
+    let llm = crate::llm::LlmClient::auto(headless.as_ref())
+        .with_nano_id(&config.id);
 
     let progress_pct = if total > 0 { (progress as f64 / total as f64) * 100.0 } else { 0.0 };
     let current_key = items.get(state.active_index)
