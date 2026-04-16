@@ -39,7 +39,7 @@ quick-xml = { workspace = true }
 jsonschema = { workspace = true }
 
 [features]
-default = []
+default = ["browser"]
 rhai-scripting = ["dep:rhai"]
 browser = ["dep:headless_chrome"]
 
