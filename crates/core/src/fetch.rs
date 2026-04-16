@@ -20,7 +20,26 @@ const MAX_RETRIES: u32 = 3;
 const RETRY_DELAY_MS: u64 = 2000;
 
 /// Fetch content from a source URL with retry logic.
+///
+/// When `source.needs_browser` is true, uses headless Chromium to render
+/// JavaScript-heavy pages (e.g. bahn.de, SPAs). Falls back to HTTP if the
+/// `browser` feature is not compiled in.
 pub async fn fetch_source(source: &Source) -> Result<String> {
+    // Browser path: render the page with headless Chrome
+    if source.needs_browser {
+        #[cfg(feature = "browser")]
+        {
+            return fetch_browser(&source.url).await;
+        }
+        #[cfg(not(feature = "browser"))]
+        {
+            tracing::warn!(
+                "needs_browser=true but binary compiled without 'browser' feature. \
+                 Falling back to plain HTTP (JS won't be rendered)."
+            );
+        }
+    }
+
     let mut last_err = None;
 
     for attempt in 1..=MAX_RETRIES {
@@ -472,6 +491,67 @@ fn decode_ical_text(s: &str) -> String {
         }
     }
     out
+}
+
+// ─── Headless browser fetch ────────────────────────────────────────────
+
+/// Fetch a page using headless Chromium. The page is fully rendered
+/// (JavaScript executed, XHR resolved) before extracting the DOM content.
+///
+/// Requires the `browser` Cargo feature and a Chromium/Chrome binary on PATH
+/// or in CHROME_PATH / CHROMIUM_PATH env var.
+///
+/// This is the generic building block for any nano-zyrkel that needs to
+/// scrape JS-rendered websites (bahn.de, airline checkins, SPAs, etc.).
+#[cfg(feature = "browser")]
+async fn fetch_browser(url: &str) -> Result<String> {
+    use headless_chrome::{Browser, LaunchOptions};
+    use std::time::Duration;
+
+    tracing::info!(url, "Browser fetch: launching headless Chrome");
+
+    // Launch headless Chrome
+    let browser = tokio::task::spawn_blocking(move || {
+        let launch_options = LaunchOptions {
+            headless: true,
+            sandbox: false,
+            window_size: Some((1280, 900)),
+            idle_browser_timeout: Duration::from_secs(60),
+            ..Default::default()
+        };
+        Browser::new(launch_options)
+    })
+    .await?
+    .context("launching headless Chrome — is chromium/chrome installed?")?;
+
+    let url_owned = url.to_string();
+
+    let content = tokio::task::spawn_blocking(move || -> Result<String> {
+        let tab = browser.new_tab().context("creating browser tab")?;
+
+        // Navigate and wait for network idle
+        tab.navigate_to(&url_owned)
+            .context("navigating to URL")?;
+
+        // Wait up to 15s for the page to settle (JS rendering, XHR, etc.)
+        tab.wait_until_navigated()
+            .context("waiting for navigation")?;
+
+        // Additional wait for dynamic content
+        std::thread::sleep(Duration::from_secs(3));
+
+        // Extract the rendered DOM
+        let html = tab
+            .get_content()
+            .context("extracting page content")?;
+
+        tracing::info!(bytes = html.len(), "Browser fetch: page rendered");
+        Ok(html)
+    })
+    .await?
+    .context("browser rendering")?;
+
+    Ok(content)
 }
 
 // ─── Shared text fetch helper used by RSS/Sitemap/iCal ────────────────
